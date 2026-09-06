@@ -16,6 +16,29 @@ model User {
   passwordHash String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  coupleAsA    Couple?  @relation("CoupleUserA")
+  coupleAsB    Couple?  @relation("CoupleUserB")
+}
+
+model Couple {
+  id        String   @id @default(cuid())
+  userAId   String   @unique
+  userBId   String   @unique
+  createdAt DateTime @default(now())
+  userA     User     @relation("CoupleUserA", fields: [userAId], references: [id])
+  userB     User     @relation("CoupleUserB", fields: [userBId], references: [id])
+}
+
+model CoupleInvite {
+  id           String    @id @default(cuid())
+  inviterId    String
+  inviteeEmail String
+  code         String    @unique
+  expiresAt    DateTime
+  acceptedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([inviterId])
 }
 
 model TwoFactorCode {
