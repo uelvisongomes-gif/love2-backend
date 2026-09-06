@@ -70,6 +70,12 @@ export async function generateBlocks(userId: string, conflictId: string): Promis
     role: m.role === 'assistant' ? 'assistant' : 'user',
     content: m.content,
   }));
+  // Claude Opus 5 rejects conversations that end with an assistant message
+  // (prefill removed). Append a synthetic user turn asking for the blocks.
+  messages.push({
+    role: 'user',
+    content: 'Agora, com base na conversa acima, gere o array JSON de blocos conforme instruído.',
+  });
   const llm = await getLlmProvider().complete(messages, { system: BLOCK_GEN_SYSTEM, maxTokens: 1500 });
 
   let contents: string[];
@@ -78,8 +84,8 @@ export async function generateBlocks(userId: string, conflictId: string): Promis
   } catch (e) {
     throw new AppError('BLOCK_GEN_FAILED', `Não consegui gerar os blocos agora: ${(e as Error).message}`, 500);
   }
-  if (contents.length < 3 || contents.length > 6) {
-    throw new AppError('BLOCK_GEN_INVALID_COUNT', `LOVE retornou ${contents.length} blocos (esperado 3–6)`, 500);
+  if (contents.length < 1 || contents.length > 8) {
+    throw new AppError('BLOCK_GEN_INVALID_COUNT', `LOVE retornou ${contents.length} blocos (esperado 1–8)`, 500);
   }
 
   return prisma.$transaction(async (tx) => {
