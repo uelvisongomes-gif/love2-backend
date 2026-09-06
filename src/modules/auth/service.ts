@@ -1,7 +1,8 @@
 import argon2 from 'argon2';
 import { prisma } from '../../db/client.js';
 import { AppError } from '../../errors.js';
-import type { RegisterInput } from './schema.js';
+import { signAccessToken, signRefreshToken } from './tokens.js';
+import type { LoginInput, RegisterInput } from './schema.js';
 
 export async function registerUser(input: RegisterInput): Promise<{ userId: string }> {
   const existing = await prisma.user.findFirst({
@@ -22,4 +23,15 @@ export async function registerUser(input: RegisterInput): Promise<{ userId: stri
     select: { id: true },
   });
   return { userId: user.id };
+}
+
+export async function loginUser(input: LoginInput): Promise<{ accessToken: string; refreshToken: string }> {
+  const user = await prisma.user.findUnique({ where: { email: input.email } });
+  if (!user) throw new AppError('INVALID_CREDENTIALS', 'Credenciais inválidas', 401);
+  const ok = await argon2.verify(user.passwordHash, input.password);
+  if (!ok) throw new AppError('INVALID_CREDENTIALS', 'Credenciais inválidas', 401);
+  return {
+    accessToken: signAccessToken(user.id),
+    refreshToken: signRefreshToken(user.id),
+  };
 }

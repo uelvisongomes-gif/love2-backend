@@ -2,6 +2,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { loadConfig, type AppConfig } from './config.js';
 import { healthRoutes } from './modules/health/routes.js';
 import { authRoutes } from './modules/auth/routes.js';
+import authPlugin from './modules/auth/auth-plugin.js';
 
 export async function buildApp(config: AppConfig = loadConfig()): Promise<FastifyInstance> {
   const app = Fastify({
@@ -13,6 +14,7 @@ export async function buildApp(config: AppConfig = loadConfig()): Promise<Fastif
           : undefined,
     },
   });
+  await app.register(authPlugin);
   await app.register(healthRoutes);
   await app.register(authRoutes);
   return app;

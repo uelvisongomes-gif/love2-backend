@@ -7,6 +7,9 @@ const schema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   DATABASE_URL: z.string().url(),
   DIRECT_URL: z.string().url(),
+  JWT_SECRET: z.string().min(32),
+  ACCESS_TTL_MIN: z.coerce.number().int().positive().default(15),
+  REFRESH_TTL_DAYS: z.coerce.number().int().positive().default(7),
 });
 
 export type AppConfig = z.infer<typeof schema>;
