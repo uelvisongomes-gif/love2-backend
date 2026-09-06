@@ -74,6 +74,19 @@ model LoveMessage {
   @@index([userId, createdAt])
 }
 
+model Source {
+  id        String   @id @default(cuid())
+  pillar    String
+  title     String
+  url       String   @unique
+  content   String
+  createdAt DateTime @default(now())
+
+  // The `embedding vector(1024)` column is added via a raw SQL migration
+  // (Prisma has no native pgvector type). See migration add_source_embedding.
+  @@index([pillar])
+}
+
 model TwoFactorCode {
   id        String    @id @default(cuid())
   userId    String

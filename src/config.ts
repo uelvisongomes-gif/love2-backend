@@ -18,6 +18,11 @@ const schema = z.object({
   LLM_MODEL: z.string().default('claude-opus-5'),
   LLM_MODEL_LIGHT: z.string().default('claude-haiku-4-5'),
   ANTHROPIC_API_KEY: z.string().optional(),
+  EMBEDDING_PROVIDER: z.enum(['voyage', 'openai', 'memory']).default('memory'),
+  EMBEDDING_MODEL: z.string().default('voyage-3'),
+  EMBEDDING_DIMENSIONS: z.coerce.number().int().positive().default(1024),
+  VOYAGE_API_KEY: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(),
 });
 
 export type AppConfig = z.infer<typeof schema>;
