@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 import { AppError } from '../../errors.js';
 import { conflictMessageInput, createConflictInput } from './schema.js';
 import { createConflict, getConflict, listConflicts, postMessage } from './service.js';
+import { generateBlocks, listBlocks, updateBlock, updateBlockInput } from './blocks.js';
 
 function handle(err: unknown, reply: FastifyReply, log: FastifyBaseLogger) {
   if (err instanceof ZodError) {
@@ -55,4 +56,41 @@ export async function conflictsRoutes(app: FastifyInstance): Promise<void> {
       return handle(err, reply, req.log);
     }
   });
+
+  app.post<{ Params: { id: string } }>(
+    '/conflicts/:id/blocks/generate',
+    { preHandler: app.authenticate },
+    async (req, reply) => {
+      try {
+        return reply.code(201).send(await generateBlocks(req.userId!, req.params.id));
+      } catch (err) {
+        return handle(err, reply, req.log);
+      }
+    },
+  );
+
+  app.get<{ Params: { id: string } }>(
+    '/conflicts/:id/blocks',
+    { preHandler: app.authenticate },
+    async (req, reply) => {
+      try {
+        return reply.code(200).send(await listBlocks(req.userId!, req.params.id));
+      } catch (err) {
+        return handle(err, reply, req.log);
+      }
+    },
+  );
+
+  app.patch<{ Params: { id: string; blockId: string } }>(
+    '/conflicts/:id/blocks/:blockId',
+    { preHandler: app.authenticate },
+    async (req, reply) => {
+      try {
+        const input = updateBlockInput.parse(req.body);
+        return reply.code(200).send(await updateBlock(req.userId!, req.params.id, req.params.blockId, input));
+      } catch (err) {
+        return handle(err, reply, req.log);
+      }
+    },
+  );
 }
