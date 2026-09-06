@@ -24,6 +24,7 @@
 - No PII beyond name/email/phone in the foundation layer (no CPF/RG/photo).
 - Rate limits: **5 requests/min** on auth endpoints per IP; **10 requests/hour** on 2FA send.
 - Test coverage: every service function has at least one happy-path test and one failure-path test.
+- **Vendor-neutral Postgres:** the codebase depends only on standard Postgres (and the standard `pgvector` extension). No provider-specific SQL, no `auth.uid()`/RLS coupled to a hosted auth, no proprietary client libraries. Switching between Supabase, Neon, RDS, self-hosted Docker, or on-premise Postgres must require **only changing `DATABASE_URL`** — nothing else. Any code that would break this rule is a plan violation.
 
 ---
 
