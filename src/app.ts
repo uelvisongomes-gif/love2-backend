@@ -6,6 +6,7 @@ import authPlugin from './modules/auth/auth-plugin.js';
 import { couplesRoutes } from './modules/couples/routes.js';
 import { consentRoutes } from './modules/consent/routes.js';
 import { loveRoutes } from './modules/love/routes.js';
+import { profileRoutes } from './modules/profile/routes.js';
 
 export async function buildApp(config: AppConfig = loadConfig()): Promise<FastifyInstance> {
   const app = Fastify({
@@ -23,5 +24,6 @@ export async function buildApp(config: AppConfig = loadConfig()): Promise<Fastif
   await app.register(couplesRoutes);
   await app.register(consentRoutes);
   await app.register(loveRoutes);
+  await app.register(profileRoutes);
   return app;
 }

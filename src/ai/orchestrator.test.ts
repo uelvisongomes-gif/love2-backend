@@ -4,9 +4,9 @@ import { chatWithLove } from './orchestrator.js';
 import { MemoryLlmProvider, setLlmProvider } from './llm.js';
 
 const llm = new MemoryLlmProvider();
-setLlmProvider(llm);
 
 beforeEach(async () => {
+  setLlmProvider(llm);
   await prisma.loveMessage.deleteMany();
   llm.calls.length = 0;
 });

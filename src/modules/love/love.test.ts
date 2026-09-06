@@ -4,7 +4,6 @@ import { prisma } from '../../db/client.js';
 import { MemoryLlmProvider, setLlmProvider } from '../../ai/llm.js';
 
 const llm = new MemoryLlmProvider();
-setLlmProvider(llm);
 
 const app = await buildApp();
 
@@ -32,6 +31,7 @@ async function grantDisclaimer(token: string) {
 }
 
 beforeEach(async () => {
+  setLlmProvider(llm);
   await prisma.loveMessage.deleteMany();
   await prisma.auditLog.deleteMany();
   await prisma.consent.deleteMany();
