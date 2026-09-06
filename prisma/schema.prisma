@@ -112,6 +112,33 @@ model SafetyScreening {
   updatedAt              DateTime @updatedAt
 }
 
+model CheckIn {
+  id             String   @id @default(cuid())
+  userId         String
+  date           DateTime @db.Date
+  moodOverall    Int
+  intimacyToday  Boolean  @default(false)
+  dateNightToday Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  events         Event[]
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model Event {
+  id          String  @id @default(cuid())
+  checkInId   String
+  kind        String
+  pillar      String
+  intensity   Int
+  description String
+  checkIn     CheckIn @relation(fields: [checkInId], references: [id], onDelete: Cascade)
+
+  @@index([checkInId])
+}
+
 model TwoFactorCode {
   id        String    @id @default(cuid())
   userId    String
