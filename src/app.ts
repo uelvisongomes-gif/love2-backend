@@ -8,6 +8,7 @@ import { consentRoutes } from './modules/consent/routes.js';
 import { loveRoutes } from './modules/love/routes.js';
 import { profileRoutes } from './modules/profile/routes.js';
 import { checkinsRoutes } from './modules/checkins/routes.js';
+import { journalRoutes } from './modules/journal/routes.js';
 
 export async function buildApp(config: AppConfig = loadConfig()): Promise<FastifyInstance> {
   const app = Fastify({
@@ -27,5 +28,6 @@ export async function buildApp(config: AppConfig = loadConfig()): Promise<Fastif
   await app.register(loveRoutes);
   await app.register(profileRoutes);
   await app.register(checkinsRoutes);
+  await app.register(journalRoutes);
   return app;
 }

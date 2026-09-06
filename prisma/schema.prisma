@@ -139,6 +139,18 @@ model Event {
   @@index([checkInId])
 }
 
+model JournalEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  content   String
+  mood      Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+}
+
 model TwoFactorCode {
   id        String    @id @default(cuid())
   userId    String
