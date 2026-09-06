@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 import { AppError } from '../../errors.js';
 import { upsertProfileInput } from './schema.js';
 import { getAllowedTopics, getProfile, upsertProfile } from './service.js';
+import { getSafetyScreening, safetyScreeningInput, submitSafetyScreening } from './safety-screening.js';
 
 function handle(err: unknown, reply: FastifyReply, log: FastifyBaseLogger) {
   if (err instanceof ZodError) {
@@ -39,6 +40,23 @@ export async function profileRoutes(app: FastifyInstance): Promise<void> {
   app.get('/profile/allowed-topics', { preHandler: app.authenticate }, async (req, reply) => {
     try {
       return reply.code(200).send(await getAllowedTopics(req.userId!));
+    } catch (err) {
+      return handle(err, reply, req.log);
+    }
+  });
+
+  app.post('/profile/safety-screening', { preHandler: app.authenticate }, async (req, reply) => {
+    try {
+      const input = safetyScreeningInput.parse(req.body);
+      return reply.code(200).send(await submitSafetyScreening(req.userId!, input));
+    } catch (err) {
+      return handle(err, reply, req.log);
+    }
+  });
+
+  app.get('/profile/safety-screening', { preHandler: app.authenticate }, async (req, reply) => {
+    try {
+      return reply.code(200).send(await getSafetyScreening(req.userId!));
     } catch (err) {
       return handle(err, reply, req.log);
     }

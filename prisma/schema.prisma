@@ -101,6 +101,17 @@ model Profile {
   updatedAt            DateTime @updatedAt
 }
 
+model SafetyScreening {
+  id                     String   @id @default(cuid())
+  userId                 String   @unique
+  hasViolenceHistory     Boolean
+  hasSuicidalIdeation    Boolean
+  hasSubstanceAbuse      Boolean
+  hasChildSafetyConcerns Boolean
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
 model TwoFactorCode {
   id        String    @id @default(cuid())
   userId    String
