@@ -253,45 +253,28 @@ Add to `devDependencies`:
 ```
 Add scripts:
 ```json
-"db:up": "docker compose up -d db",
-"db:down": "docker compose down",
 "db:migrate": "prisma migrate dev",
 "db:generate": "prisma generate"
 ```
 
-- [ ] **Step 2: Create `docker-compose.yml`**
-
-```yaml
-services:
-  db:
-    image: pgvector/pgvector:pg16
-    environment:
-      POSTGRES_USER: love
-      POSTGRES_PASSWORD: love
-      POSTGRES_DB: love-casal
-    ports:
-      - "5432:5432"
-    volumes:
-      - lovedb:/var/lib/postgresql/data
-volumes:
-  lovedb:
-```
-
-- [ ] **Step 3: Update `.env.example`**
+- [ ] **Step 2: Update `.env.example`**
 
 Append:
 ```
-DATABASE_URL=postgresql://love:love@localhost:5432/love-casal?schema=public
+# Provider-neutral Postgres URLs. Any Postgres works (Supabase, Neon, RDS, self-hosted Docker).
+DATABASE_URL=postgresql://user:pass@host:6543/dbname?pgbouncer=true
+DIRECT_URL=postgresql://user:pass@host:5432/dbname
 ```
 
-- [ ] **Step 4: Update `src/config.ts`**
+- [ ] **Step 3: Update `src/config.ts`**
 
 Add to the zod schema:
 ```ts
   DATABASE_URL: z.string().url(),
+  DIRECT_URL: z.string().url(),
 ```
 
-- [ ] **Step 5: Create `prisma/schema.prisma`**
+- [ ] **Step 4: Create `prisma/schema.prisma`**
 
 ```prisma
 generator client {
@@ -299,8 +282,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 ```
 
