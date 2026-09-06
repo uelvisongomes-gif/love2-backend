@@ -11,6 +11,7 @@ import { checkinsRoutes } from './modules/checkins/routes.js';
 import { journalRoutes } from './modules/journal/routes.js';
 import { tasksRoutes } from './modules/tasks/routes.js';
 import { healthIndexRoutes } from './modules/health-index/routes.js';
+import { conflictsRoutes } from './modules/conflicts/routes.js';
 
 export async function buildApp(config: AppConfig = loadConfig()): Promise<FastifyInstance> {
   const app = Fastify({
@@ -33,5 +34,6 @@ export async function buildApp(config: AppConfig = loadConfig()): Promise<Fastif
   await app.register(journalRoutes);
   await app.register(tasksRoutes);
   await app.register(healthIndexRoutes);
+  await app.register(conflictsRoutes);
   return app;
 }
