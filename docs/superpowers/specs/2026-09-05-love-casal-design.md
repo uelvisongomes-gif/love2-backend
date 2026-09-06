@@ -1,4 +1,4 @@
-# Casal LOVE — Design (v0.1)
+# LOVE Casal — Design (v0.1)
 
 App mediador para casais, com IA de nome **LOVE**. Mediação técnica, sem se apresentar como psicóloga/terapeuta. Objetivo: preservar o casamento com saúde. Em casos de abuso/violência, acolhe e encaminha a autoridades — não media.
 

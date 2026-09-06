@@ -1,14 +1,14 @@
-# Casal LOVE Foundation — Implementation Plan
+# LOVE Casal Foundation — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Bootstrap the Casal LOVE backend (Fastify + Postgres + Prisma) with Auth (register/login/2FA), Couples (invite/accept), and LGPD consent — the foundation on which the AI Core will run.
+**Goal:** Bootstrap the LOVE Casal backend (Fastify + Postgres + Prisma) with Auth (register/login/2FA), Couples (invite/accept), and LGPD consent — the foundation on which the AI Core will run.
 
 **Architecture:** Modular monolith in TypeScript. Fastify serves REST endpoints. Prisma manages Postgres schema. Each domain lives in `src/modules/<name>/{routes.ts, service.ts, schema.ts, *.test.ts}`. Postgres runs locally via docker-compose (image `pgvector/pgvector:pg16`, which brings the extension we'll use in Plan 2).
 
 **Tech Stack:** Node 20+, TypeScript 5, Fastify 4, Prisma 5, PostgreSQL 16 + pgvector, argon2, jsonwebtoken, zod, Twilio, Vitest, pino.
 
-**Spec:** `docs/superpowers/specs/2026-09-05-casal-love-design.md`
+**Spec:** `docs/superpowers/specs/2026-09-05-love-casal-design.md`
 
 ## Global Constraints
 
@@ -43,7 +43,7 @@
 
 ```json
 {
-  "name": "casal-love",
+  "name": "love-casal",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -265,7 +265,7 @@ services:
     environment:
       POSTGRES_USER: love
       POSTGRES_PASSWORD: love
-      POSTGRES_DB: casal-love
+      POSTGRES_DB: love-casal
     ports:
       - "5432:5432"
     volumes:
@@ -278,7 +278,7 @@ volumes:
 
 Append:
 ```
-DATABASE_URL=postgresql://love:love@localhost:5432/casal-love?schema=public
+DATABASE_URL=postgresql://love:love@localhost:5432/love-casal?schema=public
 ```
 
 - [ ] **Step 4: Update `src/config.ts`**
@@ -1033,7 +1033,7 @@ export async function request2fa(userId: string): Promise<{ sent: true }> {
   await prisma.twoFactorCode.create({
     data: { userId, codeHash, expiresAt: new Date(Date.now() + TWO_FA_TTL_MS) },
   });
-  await getSmsSender().send(user.phone, `Casal LOVE: seu código é ${code}. Válido por 5 minutos.`);
+  await getSmsSender().send(user.phone, `LOVE Casal: seu código é ${code}. Válido por 5 minutos.`);
   return { sent: true };
 }
 
