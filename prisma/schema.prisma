@@ -61,6 +61,19 @@ model AuditLog {
   @@index([actorId])
 }
 
+model LoveMessage {
+  id             String   @id @default(cuid())
+  userId         String
+  context        String
+  role           String
+  content        String
+  safetyCategory String?
+  citations      Json?
+  createdAt      DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
 model TwoFactorCode {
   id        String    @id @default(cuid())
   userId    String
