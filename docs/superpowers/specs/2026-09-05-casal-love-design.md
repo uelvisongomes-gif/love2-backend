@@ -1,6 +1,6 @@
-# LOVEMEDIADOR — Design (v0.1)
+# Casal LOVE — Design (v0.1)
 
-App mediador para casais, com IA de nome **Love**. Mediação técnica, sem se apresentar como psicóloga/terapeuta. Objetivo: preservar o casamento com saúde. Em casos de abuso/violência, acolhe e encaminha a autoridades — não media.
+App mediador para casais, com IA de nome **LOVE**. Mediação técnica, sem se apresentar como psicóloga/terapeuta. Objetivo: preservar o casamento com saúde. Em casos de abuso/violência, acolhe e encaminha a autoridades — não media.
 
 ## 1. Personas
 
@@ -16,7 +16,7 @@ App mediador para casais, com IA de nome **Love**. Mediação técnica, sem se a
 - Questionário base: tempo juntos, filhos, moradia, linguagens do amor, notas 0-10 nos 7 pilares.
 - Preferências: religião (opt-in), política, temas evitados.
 - Triagem de segurança (violência, ideação suicida, substâncias) — se positivo, desvia para "modo cuidado", sem mediação.
-- Termo LGPD + disclaimer ("Love não é psicóloga/terapeuta").
+- Termo LGPD + disclaimer ("LOVE não é psicóloga/terapeuta").
 - Regra: IA só cruza dados dos dois quando ambos concluírem onboarding.
 
 ### 2.2 Check-in diário
@@ -38,8 +38,8 @@ Regras invioláveis: não julga, não acusa, não diagnostica, não sugere separ
 ### 2.4 Ponte entre parceiros (consentimento por blocos)
 - Resumo em blocos → A aprova/edita/remove bloco a bloco.
 - Blocos aprovados formam "resumo autorizado".
-- Love aborda B em tom consultivo, sem mostrar o resumo (para não gerar defensiva).
-- B dá sua versão. Love cruza e volta a mediar cada um. Se não resolver, sugere sessão em grupo (v2).
+- LOVE aborda B em tom consultivo, sem mostrar o resumo (para não gerar defensiva).
+- B dá sua versão. LOVE cruza e volta a mediar cada um. Se não resolver, sugere sessão em grupo (v2).
 
 ### 2.5 Journal privado
 Isolado por usuário. Nunca compartilhado.
@@ -72,7 +72,7 @@ Aba de credenciados. Receita = mensalidade dos terapeutas.
 ### 2.13 Modo separação
 IA sempre tenta reconciliar (exceto abuso/violência). Se pessoa insiste, faz perguntas para dar clareza; não valida. Se decisão for tomada, orienta comunicação respeitosa e recomenda profissional.
 
-## 3. Regras da IA "Love" (system prompt + guardrails)
+## 3. Regras da IA "LOVE" (system prompt + guardrails)
 
 1. Identidade explícita como mediadora, não terapeuta.
 2. Estatística só com fonte citada do RAG.
@@ -88,7 +88,7 @@ IA sempre tenta reconciliar (exceto abuso/violência). Se pessoa insiste, faz pe
 
 ## 4. Frontend — telas
 
-Splash/Onboarding, Home, Chat com Love, Sala de voz, Journal, Consentimento por blocos, Tarefas, Rituais, Painel de saúde, Perfil, Marketplace (v2).
+Splash/Onboarding, Home, Chat com LOVE, Sala de voz, Journal, Consentimento por blocos, Tarefas, Rituais, Painel de saúde, Perfil, Marketplace (v2).
 
 ## 5. Backend — serviços
 
