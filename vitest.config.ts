@@ -10,5 +10,8 @@ export default defineConfig({
     pool: 'forks',
     poolOptions: { forks: { singleFork: true } },
     fileParallelism: false,
+    // Tests hit remote Supabase + real LLM — round-trip latency stacks up.
+    testTimeout: 30000,
+    hookTimeout: 30000,
   },
 });
