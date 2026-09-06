@@ -14,6 +14,10 @@ const schema = z.object({
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_FROM: z.string().optional(),
+  LLM_PROVIDER: z.enum(['anthropic', 'memory']).default('memory'),
+  LLM_MODEL: z.string().default('claude-opus-5'),
+  LLM_MODEL_LIGHT: z.string().default('claude-haiku-4-5'),
+  ANTHROPIC_API_KEY: z.string().optional(),
 });
 
 export type AppConfig = z.infer<typeof schema>;
