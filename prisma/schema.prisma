@@ -151,6 +151,23 @@ model JournalEntry {
   @@index([userId, createdAt])
 }
 
+model CoupleTask {
+  id           String    @id @default(cuid())
+  coupleId     String
+  pillar       String
+  title        String
+  description  String?
+  dueBy        DateTime?
+  createdBy    String
+  completedByA Boolean   @default(false)
+  completedByB Boolean   @default(false)
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([coupleId, createdAt])
+}
+
 model TwoFactorCode {
   id        String    @id @default(cuid())
   userId    String
