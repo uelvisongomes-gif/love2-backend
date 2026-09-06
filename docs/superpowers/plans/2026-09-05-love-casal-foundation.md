@@ -227,17 +227,19 @@ git commit -m "feat(foundation): scaffold Fastify + Vitest with /health"
 
 ---
 
-### Task 2: PostgreSQL + Prisma + docker-compose
+### Task 2: PostgreSQL (Supabase) + Prisma
 
 **Files:**
-- Create: `docker-compose.yml`, `prisma/schema.prisma`, `src/db/client.ts`, `src/db/client.test.ts`, add to `.env.example`
+- Create: `prisma/schema.prisma`, `src/db/client.ts`, `src/db/client.test.ts`; add to `.env.example`
 - Modify: `package.json` (add prisma deps + scripts)
 
 **Interfaces:**
 - Consumes: `loadConfig` from Task 1.
 - Produces:
   - `prisma: PrismaClient` — singleton exported from `src/db/client.ts`.
-  - `DATABASE_URL` env var, added to `AppConfig`.
+  - `DATABASE_URL` (pooler URL used by the app) and `DIRECT_URL` (direct connection used by Prisma migrations) env vars, added to `AppConfig`.
+
+**Portability note:** Postgres hosting is Supabase for now, but the codebase must remain vendor-neutral (see Global Constraints). Switching to Neon, RDS, Docker, or self-hosted Postgres = change `DATABASE_URL`/`DIRECT_URL` only.
 
 - [ ] **Step 1: Update `package.json`**
 
@@ -302,7 +304,7 @@ datasource db {
 }
 ```
 
-- [ ] **Step 6: Write the failing DB connection test**
+- [ ] **Step 5: Write the failing DB connection test**
 
 Create `src/db/client.test.ts`:
 ```ts
@@ -319,12 +321,12 @@ describe('prisma client', () => {
 });
 ```
 
-- [ ] **Step 7: Run the test and confirm it fails**
+- [ ] **Step 6: Run the test and confirm it fails**
 
 Run: `npm test`
 Expected: FAIL (module `./client.js` not found).
 
-- [ ] **Step 8: Implement `src/db/client.ts`**
+- [ ] **Step 7: Implement `src/db/client.ts`**
 
 ```ts
 import { PrismaClient } from '@prisma/client';
@@ -337,22 +339,21 @@ export const prisma = global.__prisma ?? new PrismaClient();
 if (process.env.NODE_ENV !== 'production') global.__prisma = prisma;
 ```
 
-- [ ] **Step 9: Bring up DB, generate client, run tests**
+- [ ] **Step 8: Install, generate client, run tests**
 
 Run:
 ```
 npm install
-npm run db:up
 npm run db:generate
 npm test
 ```
-Expected: 2 passed.
+Expected: 2 passed (health test from Task 1 + new DB connection test).
 
-- [ ] **Step 10: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
-git add docker-compose.yml prisma/ src/db/ .env.example package.json package-lock.json src/config.ts
-git commit -m "feat(foundation): add Postgres via docker-compose + Prisma client"
+git add prisma/ src/db/ .env.example package.json package-lock.json src/config.ts
+git commit -m "feat(foundation): add Prisma client + Postgres connection (Supabase for now, vendor-neutral)"
 ```
 
 ---
