@@ -10,6 +10,10 @@ const schema = z.object({
   JWT_SECRET: z.string().min(32),
   ACCESS_TTL_MIN: z.coerce.number().int().positive().default(15),
   REFRESH_TTL_DAYS: z.coerce.number().int().positive().default(7),
+  SMS_DRIVER: z.enum(['twilio', 'memory']).default('memory'),
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: z.string().optional(),
+  TWILIO_FROM: z.string().optional(),
 });
 
 export type AppConfig = z.infer<typeof schema>;

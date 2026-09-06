@@ -23,3 +23,6 @@ export const loginInput = z
   })
   .strict();
 export type LoginInput = z.infer<typeof loginInput>;
+
+export const verify2faInput = z.object({ code: z.string().regex(/^\d{6}$/) }).strict();
+export type Verify2faInput = z.infer<typeof verify2faInput>;
