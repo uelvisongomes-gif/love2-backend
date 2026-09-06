@@ -5,6 +5,7 @@ import { conflictMessageInput, createConflictInput } from './schema.js';
 import { createConflict, getConflict, listConflicts, postMessage } from './service.js';
 import { generateBlocks, listBlocks, updateBlock, updateBlockInput } from './blocks.js';
 import { getAuthorizedSummary, openPonte, ponteRespondInput, respondPonte } from './ponte.js';
+import { crossReference, getInsight } from './cross-ref.js';
 
 function handle(err: unknown, reply: FastifyReply, log: FastifyBaseLogger) {
   if (err instanceof ZodError) {
@@ -126,6 +127,30 @@ export async function conflictsRoutes(app: FastifyInstance): Promise<void> {
     async (req, reply) => {
       try {
         return reply.code(200).send(await getAuthorizedSummary(req.userId!, req.params.id));
+      } catch (err) {
+        return handle(err, reply, req.log);
+      }
+    },
+  );
+
+  app.post<{ Params: { id: string } }>(
+    '/conflicts/:id/cross-reference',
+    { preHandler: app.authenticate },
+    async (req, reply) => {
+      try {
+        return reply.code(200).send(await crossReference(req.userId!, req.params.id));
+      } catch (err) {
+        return handle(err, reply, req.log);
+      }
+    },
+  );
+
+  app.get<{ Params: { id: string } }>(
+    '/conflicts/:id/insight',
+    { preHandler: app.authenticate },
+    async (req, reply) => {
+      try {
+        return reply.code(200).send(await getInsight(req.userId!, req.params.id));
       } catch (err) {
         return handle(err, reply, req.log);
       }
