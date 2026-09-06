@@ -41,6 +41,26 @@ model CoupleInvite {
   @@index([inviterId])
 }
 
+model Consent {
+  id        String   @id @default(cuid())
+  userId    String
+  scope     String
+  version   String
+  createdAt DateTime @default(now())
+
+  @@index([userId, scope])
+}
+
+model AuditLog {
+  id      String   @id @default(cuid())
+  actorId String
+  action  String
+  target  String
+  at      DateTime @default(now())
+
+  @@index([actorId])
+}
+
 model TwoFactorCode {
   id        String    @id @default(cuid())
   userId    String
