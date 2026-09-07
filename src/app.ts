@@ -1,4 +1,5 @@
 import Fastify, { type FastifyInstance } from 'fastify';
+import cors from '@fastify/cors';
 import { loadConfig, type AppConfig } from './config.js';
 import { healthRoutes } from './modules/health/routes.js';
 import { authRoutes } from './modules/auth/routes.js';
@@ -22,6 +23,10 @@ export async function buildApp(config: AppConfig = loadConfig()): Promise<Fastif
           ? { target: 'pino-pretty', options: { colorize: true } }
           : undefined,
     },
+  });
+  await app.register(cors, {
+    origin: ['http://localhost:3001'],
+    credentials: true,
   });
   await app.register(authPlugin);
   await app.register(healthRoutes);
