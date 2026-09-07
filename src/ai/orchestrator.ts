@@ -115,7 +115,7 @@ export async function chatWithLove(input: ChatInput): Promise<ChatResult> {
       context: input.context,
       role: 'assistant',
       content: llmResult.text,
-      citations: citations.length ? citations : undefined,
+      citations: citations.length ? (citations as unknown as object) : undefined,
     },
     select: { id: true },
   });
