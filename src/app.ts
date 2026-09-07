@@ -29,6 +29,7 @@ export async function buildApp(config: AppConfig = loadConfig()): Promise<Fastif
       'http://localhost:3001',
       'https://www.love2.com.br',
       'https://love2.com.br',
+      /\.vercel\.app$/,
     ],
     credentials: true,
   });
