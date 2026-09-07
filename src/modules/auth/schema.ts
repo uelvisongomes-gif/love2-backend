@@ -7,10 +7,10 @@ export const registerInput = z
     phone: z.string().regex(/^\+[1-9]\d{7,14}$/, 'phone must be E.164'),
     password: z
       .string()
-      .min(10)
-      .regex(/[A-Z]/, 'must contain uppercase')
-      .regex(/[a-z]/, 'must contain lowercase')
-      .regex(/\d/, 'must contain digit'),
+      .min(6, 'senha precisa ter no mínimo 6 caracteres')
+      .regex(/[A-Z]/, 'precisa ter ao menos uma letra maiúscula')
+      .regex(/[a-z]/, 'precisa ter ao menos uma letra minúscula')
+      .regex(/\d/, 'precisa ter ao menos um número'),
   })
   .strict();
 
