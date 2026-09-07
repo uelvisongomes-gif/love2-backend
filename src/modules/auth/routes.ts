@@ -1,8 +1,21 @@
 import type { FastifyInstance } from 'fastify';
 import { ZodError } from 'zod';
 import { AppError } from '../../errors.js';
-import { loginInput, registerInput, verify2faInput } from './schema.js';
-import { loginUser, registerUser, request2fa, verify2fa } from './service.js';
+import {
+  confirmPasswordResetInput,
+  loginInput,
+  registerInput,
+  requestPasswordResetInput,
+  verify2faInput,
+} from './schema.js';
+import {
+  confirmPasswordReset,
+  loginUser,
+  registerUser,
+  request2fa,
+  requestPasswordReset,
+  verify2fa,
+} from './service.js';
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   app.post('/auth/register', async (req, reply) => {
@@ -39,6 +52,41 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(err.statusCode).send({ error: { code: err.code, message: err.message } });
       }
       req.log.error({ err }, 'login failed');
+      return reply.code(500).send({ error: { code: 'INTERNAL_ERROR', message: 'Erro interno' } });
+    }
+  });
+
+  app.post('/auth/password-reset/request', async (req, reply) => {
+    try {
+      const input = requestPasswordResetInput.parse(req.body);
+      const result = await requestPasswordReset(input.email);
+      return reply.code(200).send(result);
+    } catch (err) {
+      if (err instanceof ZodError) {
+        return reply.code(400).send({
+          error: { code: 'VALIDATION_ERROR', message: err.issues.map((i) => i.message).join('; ') },
+        });
+      }
+      req.log.error({ err }, 'password reset request failed');
+      return reply.code(500).send({ error: { code: 'INTERNAL_ERROR', message: 'Erro interno' } });
+    }
+  });
+
+  app.post('/auth/password-reset/confirm', async (req, reply) => {
+    try {
+      const input = confirmPasswordResetInput.parse(req.body);
+      const result = await confirmPasswordReset(input);
+      return reply.code(200).send(result);
+    } catch (err) {
+      if (err instanceof ZodError) {
+        return reply.code(400).send({
+          error: { code: 'VALIDATION_ERROR', message: err.issues.map((i) => i.message).join('; ') },
+        });
+      }
+      if (err instanceof AppError) {
+        return reply.code(err.statusCode).send({ error: { code: err.code, message: err.message } });
+      }
+      req.log.error({ err }, 'password reset confirm failed');
       return reply.code(500).send({ error: { code: 'INTERNAL_ERROR', message: 'Erro interno' } });
     }
   });

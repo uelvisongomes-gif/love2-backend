@@ -26,3 +26,22 @@ export type LoginInput = z.infer<typeof loginInput>;
 
 export const verify2faInput = z.object({ code: z.string().regex(/^\d{6}$/) }).strict();
 export type Verify2faInput = z.infer<typeof verify2faInput>;
+
+export const requestPasswordResetInput = z
+  .object({ email: z.string().email().toLowerCase() })
+  .strict();
+export type RequestPasswordResetInput = z.infer<typeof requestPasswordResetInput>;
+
+export const confirmPasswordResetInput = z
+  .object({
+    email: z.string().email().toLowerCase(),
+    code: z.string().regex(/^\d{6}$/, 'código precisa ter 6 dígitos'),
+    newPassword: z
+      .string()
+      .min(6, 'senha precisa ter no mínimo 6 caracteres')
+      .regex(/[A-Z]/, 'precisa ter ao menos uma letra maiúscula')
+      .regex(/[a-z]/, 'precisa ter ao menos uma letra minúscula')
+      .regex(/\d/, 'precisa ter ao menos um número'),
+  })
+  .strict();
+export type ConfirmPasswordResetInput = z.infer<typeof confirmPasswordResetInput>;

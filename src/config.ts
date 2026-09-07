@@ -23,6 +23,13 @@ const schema = z.object({
   EMBEDDING_DIMENSIONS: z.coerce.number().int().positive().default(1024),
   VOYAGE_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
+  EMAIL_DRIVER: z.enum(['smtp', 'memory']).default('memory'),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  EMAIL_FROM: z.string().optional(),
+  APP_URL: z.string().url().default('https://love2-woad.vercel.app'),
 });
 
 export type AppConfig = z.infer<typeof schema>;
