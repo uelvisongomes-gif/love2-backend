@@ -21,11 +21,25 @@ class SmtpEmailSender implements EmailSender {
       port,
       secure: port === 465,
       auth: { user, pass },
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 15_000,
     });
     this.from = from;
   }
   async send(to: string, subject: string, text: string, html?: string): Promise<void> {
-    await this.transporter.sendMail({ from: this.from, to, subject, text, html });
+    try {
+      await this.transporter.sendMail({ from: this.from, to, subject, text, html });
+    } catch (err) {
+      const e = err as { code?: string; command?: string; response?: string; message?: string };
+      console.error('[SMTP] send failed:', {
+        code: e.code,
+        command: e.command,
+        response: e.response,
+        message: e.message,
+      });
+      throw err;
+    }
   }
 }
 
