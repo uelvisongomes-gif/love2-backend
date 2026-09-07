@@ -48,7 +48,7 @@ export async function request2fa(userId: string): Promise<{ sent: true }> {
   await prisma.twoFactorCode.create({
     data: { userId, codeHash, expiresAt: new Date(Date.now() + TWO_FA_TTL_MS) },
   });
-  await getSmsSender().send(user.phone, `LOVE Casal: seu código é ${code}. Válido por 5 minutos.`);
+  await getSmsSender().send(user.phone, `love2: seu código é ${code}. Válido por 5 minutos.`);
   return { sent: true };
 }
 

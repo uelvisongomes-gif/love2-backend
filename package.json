@@ -1,5 +1,5 @@
 {
-  "name": "love-casal",
+  "name": "love2-api",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.65.0",
-    "@fastify/cors": "^11.3.0",
+    "@fastify/cors": "^9.0.1",
     "@prisma/client": "^5.20.0",
     "argon2": "^0.41.1",
     "dotenv": "^16.4.5",

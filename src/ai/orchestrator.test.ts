@@ -30,7 +30,7 @@ describe('chatWithLove', () => {
   });
 
   it('runs the LLM path when safe and injects LOVE identity in system prompt', async () => {
-    llm.enqueue('Sou a LOVE, mediadora do LOVE Casal. Vamos conversar sobre escuta ativa.');
+    llm.enqueue('Sou a LOVE, mediadora do love2. Vamos conversar sobre escuta ativa.');
 
     const res = await chatWithLove({
       userId: 'u2',

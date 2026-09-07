@@ -4,7 +4,7 @@ import { AppError } from '../../errors.js';
 import { getLlmProvider, type LlmMessage } from '../../ai/llm.js';
 
 const BLOCK_GEN_SYSTEM = [
-  'Você é LOVE, mediadora do LOVE Casal. Você NÃO é psicóloga nem terapeuta.',
+  'Você é LOVE, mediadora do love2. Você NÃO é psicóloga nem terapeuta.',
   '',
   'Sua tarefa agora: leia a conversa abaixo entre você e a pessoa A, e produza',
   'entre 3 e 6 blocos de resumo que poderão ser mostrados ao parceiro B, SE A autorizar.',

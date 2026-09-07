@@ -4,7 +4,7 @@ import { getLlmProvider, type LlmMessage } from '../../ai/llm.js';
 import type { ConflictStatus } from './schema.js';
 
 const CROSS_REF_SYSTEM = [
-  'Você é LOVE, mediadora do LOVE Casal. NÃO é psicóloga nem terapeuta.',
+  'Você é LOVE, mediadora do love2. NÃO é psicóloga nem terapeuta.',
   '',
   'Você tem acesso à conversa que teve com A e à conversa que teve com B sobre o MESMO conflito.',
   'Sua tarefa: fazer um cruzamento e devolver um JSON com quatro chaves:',
