@@ -25,7 +25,11 @@ export async function buildApp(config: AppConfig = loadConfig()): Promise<Fastif
     },
   });
   await app.register(cors, {
-    origin: ['http://localhost:3001'],
+    origin: [
+      'http://localhost:3001',
+      'https://www.love2.com.br',
+      'https://love2.com.br',
+    ],
     credentials: true,
   });
   await app.register(authPlugin);
