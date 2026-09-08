@@ -24,9 +24,19 @@ export interface ChatResult {
   messageId: string;
 }
 
-const BASE_IDENTITY = [
+const BASE_IDENTITY_FIRST = [
   'Você é LOVE, mediadora do aplicativo love2.',
-  'Você NÃO é psicóloga, terapeuta ou médica — deixe isso claro no início de conversas novas.',
+  'É a PRIMEIRA mensagem dessa pessoa nesse contexto. Comece se apresentando brevemente (1 linha) e lembre que você NÃO é psicóloga, terapeuta ou médica.',
+  'Tom: acolhedor, calmo, consultivo. Nunca julgue, nunca acuse.',
+  'Nunca dê diagnóstico. Nunca sugira separação (exceto risco à vida).',
+  'Sugere opções; não decide pelo usuário. Deixe claro que a decisão é dele/dela.',
+  'Se citar dados ou estatísticas, cite a fonte fornecida no contexto abaixo.',
+  'Se não houver fonte no contexto para uma estatística, NÃO invente — reformule sem número.',
+].join('\n');
+
+const BASE_IDENTITY_ONGOING = [
+  'Você é LOVE, mediadora do aplicativo love2.',
+  'Essa pessoa JÁ conversou com você antes. NÃO se apresente de novo, NÃO repita disclaimer sobre não ser terapeuta — siga a conversa como um diálogo natural.',
   'Tom: acolhedor, calmo, consultivo. Nunca julgue, nunca acuse.',
   'Nunca dê diagnóstico. Nunca sugira separação (exceto risco à vida).',
   'Sugere opções; não decide pelo usuário. Deixe claro que a decisão é dele/dela.',
@@ -48,6 +58,7 @@ function buildSystemPrompt(
   context: ChatContext,
   allowedTopics: string[] | undefined,
   ragBlock: string,
+  isFirstMessage: boolean,
 ): string {
   const topics = allowedTopics
     ? Object.entries(TOPICS_META)
@@ -55,7 +66,7 @@ function buildSystemPrompt(
         .map(([, v]) => v)
     : Object.values(TOPICS_META);
   return [
-    BASE_IDENTITY,
+    isFirstMessage ? BASE_IDENTITY_FIRST : BASE_IDENTITY_ONGOING,
     '',
     `Contexto da conversa: ${context}.`,
     '',
@@ -100,8 +111,21 @@ export async function chatWithLove(input: ChatInput): Promise<ChatResult> {
       ].join('\n\n')
     : 'Nenhuma fonte específica foi recuperada para este turno.';
 
-  const system = buildSystemPrompt(input.context, input.allowedTopics, ragBlock);
-  const messages: LlmMessage[] = [{ role: 'user', content: input.content }];
+  // Carrega histórico recente do usuário nesse contexto (últimas 20 msgs) — do mais antigo pro mais novo
+  const priorMessages = await prisma.loveMessage.findMany({
+    where: { userId: input.userId, context: input.context, role: { in: ['user', 'assistant'] } },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+    select: { role: true, content: true },
+  });
+  const history = priorMessages.reverse();
+  const isFirstMessage = history.length === 0;
+
+  const system = buildSystemPrompt(input.context, input.allowedTopics, ragBlock, isFirstMessage);
+  const messages: LlmMessage[] = [
+    ...history.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+    { role: 'user', content: input.content },
+  ];
   const llmResult = await getLlmProvider().complete(messages, { system });
 
   const citations: ChatCitation[] = hits.map((h) => ({
