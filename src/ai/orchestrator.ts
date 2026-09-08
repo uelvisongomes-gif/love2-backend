@@ -1,4 +1,5 @@
 import { prisma } from '../db/client.js';
+import { loadConfig } from '../config.js';
 import { getLlmProvider, type LlmMessage } from './llm.js';
 import { formatCitation, searchRag } from './rag.js';
 import { assessMessage, SAFETY_EMERGENCY_MESSAGE, type SafetyFinding } from './safety.js';
@@ -135,8 +136,14 @@ export async function chatWithLove(input: ChatInput): Promise<ChatResult> {
     ...history.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
     { role: 'user', content: input.content },
   ];
-  // Limite baixo de output pra forçar respostas curtas (~2-3 frases)
-  const llmResult = await getLlmProvider().complete(messages, { system, maxTokens: 400 });
+  // Haiku 4.5 pra chat casual — 2-3x mais rápido que Opus, qualidade ok pra diálogo.
+  // Limite baixo de output pra forçar respostas curtas.
+  const cfg = loadConfig();
+  const llmResult = await getLlmProvider().complete(messages, {
+    system,
+    maxTokens: 400,
+    model: cfg.LLM_MODEL_LIGHT,
+  });
 
   const citations: ChatCitation[] = hits.map((h) => ({
     title: h.source.title,
