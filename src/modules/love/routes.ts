@@ -40,6 +40,7 @@ export async function loveRoutes(app: FastifyInstance): Promise<void> {
         safety: { category: result.safety.category, source: result.safety.source },
         citations: result.citations,
         messageId: result.messageId,
+        ...(result.proposedAgreement ? { proposedAgreement: result.proposedAgreement } : {}),
       });
     } catch (err) {
       if (err instanceof ZodError) {

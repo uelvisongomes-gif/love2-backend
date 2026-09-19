@@ -23,6 +23,16 @@ export interface ChatResult {
   safety: SafetyFinding;
   citations: ChatCitation[];
   messageId: string;
+  proposedAgreement?: string;
+}
+
+/** Extract the text inside <acordo>...</acordo> if present, and strip the tag from the visible reply. */
+function extractAgreement(text: string): { visible: string; agreement: string | null } {
+  const match = text.match(/<acordo>([\s\S]*?)<\/acordo>/i);
+  if (!match) return { visible: text, agreement: null };
+  const agreement = match[1]?.trim() ?? null;
+  const visible = text.replace(/<acordo>[\s\S]*?<\/acordo>/gi, '').trim();
+  return { visible, agreement: agreement && agreement.length > 0 ? agreement : null };
 }
 
 const STYLE_RULES = [
@@ -55,11 +65,15 @@ const CONTEXT_INSTRUCTIONS: Record<ChatContext, string> = {
     '3) NECESSIDADE — "Se você pudesse mudar algo nessa situação, o que gostaria que tivesse acontecido?" — descubra a necessidade por trás.',
     '4) PONTO DE VISTA DO OUTRO — "Como você imagina que seu parceiro/a viveu essa mesma situação?"',
     '5) ACORDO — proponha um acordo prático e curto (uma frase), tipo: "durante conversas sobre dinheiro, se um perceber que ficou intenso, pausa e retoma em até 24h". Pergunte se topa esse acordo ou quer ajustar.',
-    'Regras importantes:',
+    'MARCAÇÃO ESPECIAL (CRÍTICO):',
+    '- SEMPRE que estiver propondo o acordo da etapa 5 (o combinado prático), termine a resposta com uma tag XML na última linha: <acordo>texto exato do acordo aqui, uma frase curta que os dois vão combinar</acordo>',
+    '- NUNCA use essa tag nas etapas 1-4 (só na etapa 5, quando o acordo já pode ser salvo).',
+    '- O texto dentro da tag deve ser SÓ o combinado em si — sem "que tal", sem pergunta, sem introdução.',
+    '- Se a pessoa pedir pra ajustar o acordo, envie a versão nova também com a tag <acordo>...</acordo>.',
+    'Outras regras:',
     '- Uma etapa por resposta. Não avance sozinha — espere a pessoa responder pra ir pra próxima.',
     '- Se ela pular etapas, gentilmente traga pro passo atual.',
     '- Não copie palavras do outro parceiro se ele estiver ausente — só sintetize neutro.',
-    '- Ao final, sinalize claramente que chegaram num acordo, e sugira "quer salvar esse acordo?" — mesmo que o app ainda não tenha esse botão.',
   ].join('\n'),
 
   'check-in': [
@@ -199,18 +213,26 @@ export async function chatWithLove(input: ChatInput): Promise<ChatResult> {
     url: h.source.url,
   }));
 
+  const { visible, agreement } = extractAgreement(llmResult.text);
+
   const asst = await prisma.loveMessage.create({
     data: {
       userId: input.userId,
       context: input.context,
       role: 'assistant',
-      content: llmResult.text,
+      content: visible,
       citations: citations.length ? (citations as unknown as object) : undefined,
     },
     select: { id: true },
   });
 
-  return { reply: llmResult.text, safety, citations, messageId: asst.id };
+  return {
+    reply: visible,
+    safety,
+    citations,
+    messageId: asst.id,
+    ...(agreement ? { proposedAgreement: agreement } : {}),
+  };
 }
 
 export { formatCitation };
