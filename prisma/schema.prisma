@@ -172,8 +172,13 @@ model CoupleTask {
   completedAt  DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  // Novos campos v2
+  category     String?   // casa | filhos | financas | tempo_casal | metas
+  assignedTo   String?   // userId específico, ou null = ambos
 
   @@index([coupleId, createdAt])
+  @@index([coupleId, category])
+  @@index([assignedTo])
 }
 
 model Conflict {
