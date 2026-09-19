@@ -1,8 +1,15 @@
 import type { FastifyBaseLogger, FastifyInstance, FastifyReply } from 'fastify';
 import { ZodError } from 'zod';
 import { AppError } from '../../errors.js';
-import { createTaskInput, listTasksQuery } from './schema.js';
-import { completeTask, createTask, deleteTask, listTasks, reopenTask } from './service.js';
+import { createTaskInput, listTasksQuery, updateTaskInput } from './schema.js';
+import {
+  completeTask,
+  createTask,
+  deleteTask,
+  listTasks,
+  reopenTask,
+  updateTask,
+} from './service.js';
 
 function handle(err: unknown, reply: FastifyReply, log: FastifyBaseLogger) {
   if (err instanceof ZodError) {
@@ -42,6 +49,19 @@ export async function tasksRoutes(app: FastifyInstance): Promise<void> {
     async (req, reply) => {
       try {
         return reply.code(200).send(await completeTask(req.userId!, req.params.id));
+      } catch (err) {
+        return handle(err, reply, req.log);
+      }
+    },
+  );
+
+  app.patch<{ Params: { id: string } }>(
+    '/tasks/:id',
+    { preHandler: app.authenticate },
+    async (req, reply) => {
+      try {
+        const input = updateTaskInput.parse(req.body);
+        return reply.code(200).send(await updateTask(req.userId!, req.params.id, input));
       } catch (err) {
         return handle(err, reply, req.log);
       }

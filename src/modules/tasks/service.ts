@@ -1,6 +1,6 @@
 import { prisma } from '../../db/client.js';
 import { AppError } from '../../errors.js';
-import type { CreateTaskInput, ListTasksQuery } from './schema.js';
+import type { CreateTaskInput, ListTasksQuery, UpdateTaskInput } from './schema.js';
 
 async function coupleOfOptional(
   userId: string,
@@ -157,6 +157,40 @@ export async function completeTask(userId: string, id: string) {
     });
   }
   return updated;
+}
+
+export async function updateTask(userId: string, id: string, input: UpdateTaskInput) {
+  const couple = await coupleOfOptional(userId);
+  const task = await prisma.coupleTask.findFirst({
+    where: {
+      id,
+      OR: couple
+        ? [{ coupleId: couple.id }, { coupleId: null, createdBy: userId }]
+        : [{ coupleId: null, createdBy: userId }],
+    },
+  });
+  if (!task) throw new AppError('NOT_FOUND', 'Tarefa não encontrada', 404);
+
+  const data: Record<string, unknown> = {};
+  if (input.title !== undefined) data.title = input.title;
+  if (input.description !== undefined) data.description = input.description;
+  if (input.category !== undefined) data.category = input.category;
+  if (input.recurrence !== undefined) data.recurrence = input.recurrence;
+  if (input.dueBy !== undefined) data.dueBy = input.dueBy ? new Date(input.dueBy) : null;
+  if (input.remindAt !== undefined) {
+    data.remindAt = input.remindAt ? new Date(input.remindAt) : null;
+    // Se muda o horário, limpa log pra permitir novo envio
+    await prisma.taskReminderLog.deleteMany({ where: { taskId: id } });
+  }
+  if (input.assignTo) {
+    if (couple) {
+      data.assignedTo = resolveAssignedTo(input.assignTo, userId, couple);
+    } else {
+      data.assignedTo = userId;
+    }
+  }
+
+  return prisma.coupleTask.update({ where: { id }, data });
 }
 
 export async function reopenTask(userId: string, id: string) {

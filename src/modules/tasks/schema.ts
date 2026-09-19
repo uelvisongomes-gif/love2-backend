@@ -22,6 +22,19 @@ export const createTaskInput = z
   .strict();
 export type CreateTaskInput = z.infer<typeof createTaskInput>;
 
+export const updateTaskInput = z
+  .object({
+    title: z.string().min(1).max(200).optional(),
+    description: z.string().max(2000).optional().nullable(),
+    dueBy: z.string().datetime().optional().nullable(),
+    category: z.enum(TASK_CATEGORIES).optional().nullable(),
+    assignTo: z.enum(['me', 'partner', 'both']).optional(),
+    recurrence: z.enum(TASK_RECURRENCES).optional().nullable(),
+    remindAt: z.string().datetime().optional().nullable(),
+  })
+  .strict();
+export type UpdateTaskInput = z.infer<typeof updateTaskInput>;
+
 export const listTasksQuery = z
   .object({
     category: z.enum(TASK_CATEGORIES).optional(),
