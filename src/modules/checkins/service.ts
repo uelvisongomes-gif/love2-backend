@@ -67,6 +67,7 @@ export async function upsertTodayCheckinV2(userId: string, input: CheckinV2Input
       partnershipScore: input.partnershipScore,
       emotionalScore: input.emotionalScore,
       openNote: input.openNote ?? null,
+      sharedWithPartner: input.sharedWithPartner,
     },
     update: {
       moodOverall,
@@ -76,6 +77,7 @@ export async function upsertTodayCheckinV2(userId: string, input: CheckinV2Input
       partnershipScore: input.partnershipScore,
       emotionalScore: input.emotionalScore,
       openNote: input.openNote ?? null,
+      sharedWithPartner: input.sharedWithPartner,
     },
   });
 }
@@ -89,6 +91,17 @@ export interface CheckinHistoryRow {
   emotionalScore: number | null;
   openNote: string | null;
   moodOverall: number | null;
+  sharedWithPartner: boolean;
+  who: 'me' | 'partner';
+}
+
+async function partnerIdOf(userId: string): Promise<string | null> {
+  const couple = await prisma.couple.findFirst({
+    where: { OR: [{ userAId: userId }, { userBId: userId }] },
+    select: { userAId: true, userBId: true },
+  });
+  if (!couple) return null;
+  return couple.userAId === userId ? couple.userBId : couple.userAId;
 }
 
 export async function checkinHistory(
@@ -99,22 +112,50 @@ export async function checkinHistory(
   const today = todayInTz(tz);
   const from = new Date(today);
   from.setUTCDate(from.getUTCDate() - (days - 1));
-  const rows = await prisma.checkIn.findMany({
-    where: { userId, date: { gte: from, lte: today } },
-    orderBy: { date: 'asc' },
-    select: {
-      date: true,
-      connectionScore: true,
-      communicationScore: true,
-      affectionScore: true,
-      partnershipScore: true,
-      emotionalScore: true,
-      openNote: true,
-      moodOverall: true,
-    },
-  });
-  return {
-    checkins: rows.map((r) => ({
+
+  const partnerId = await partnerIdOf(userId);
+
+  const [mine, partner] = await Promise.all([
+    prisma.checkIn.findMany({
+      where: { userId, date: { gte: from, lte: today } },
+      orderBy: { date: 'asc' },
+      select: {
+        date: true,
+        connectionScore: true,
+        communicationScore: true,
+        affectionScore: true,
+        partnershipScore: true,
+        emotionalScore: true,
+        openNote: true,
+        moodOverall: true,
+        sharedWithPartner: true,
+      },
+    }),
+    partnerId
+      ? prisma.checkIn.findMany({
+          where: {
+            userId: partnerId,
+            date: { gte: from, lte: today },
+            sharedWithPartner: true,
+          },
+          orderBy: { date: 'asc' },
+          select: {
+            date: true,
+            connectionScore: true,
+            communicationScore: true,
+            affectionScore: true,
+            partnershipScore: true,
+            emotionalScore: true,
+            // openNote do parceiro NÃO é exposto — segurança
+            moodOverall: true,
+            sharedWithPartner: true,
+          },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const rows: CheckinHistoryRow[] = [
+    ...mine.map((r) => ({
       date: r.date.toISOString().slice(0, 10),
       connectionScore: r.connectionScore,
       communicationScore: r.communicationScore,
@@ -123,8 +164,23 @@ export async function checkinHistory(
       emotionalScore: r.emotionalScore,
       openNote: r.openNote,
       moodOverall: r.moodOverall,
+      sharedWithPartner: r.sharedWithPartner,
+      who: 'me' as const,
     })),
-  };
+    ...partner.map((r) => ({
+      date: r.date.toISOString().slice(0, 10),
+      connectionScore: r.connectionScore,
+      communicationScore: r.communicationScore,
+      affectionScore: r.affectionScore,
+      partnershipScore: r.partnershipScore,
+      emotionalScore: r.emotionalScore,
+      openNote: null,
+      moodOverall: r.moodOverall,
+      sharedWithPartner: r.sharedWithPartner,
+      who: 'partner' as const,
+    })),
+  ];
+  return { checkins: rows };
 }
 
 export async function last7Days(userId: string): Promise<{

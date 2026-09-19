@@ -126,6 +126,7 @@ model CheckIn {
   partnershipScore    Int?
   emotionalScore      Int?
   openNote            String?
+  sharedWithPartner   Boolean  @default(false)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   events              Event[]

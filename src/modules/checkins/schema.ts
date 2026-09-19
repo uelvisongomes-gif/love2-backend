@@ -28,6 +28,7 @@ export const checkinV2Input = z
     partnershipScore: score15,
     emotionalScore: score15,
     openNote: z.string().max(2000).optional(),
+    sharedWithPartner: z.boolean().default(false),
   })
   .strict();
 export type CheckinV2Input = z.infer<typeof checkinV2Input>;
