@@ -3,6 +3,7 @@ import { loadConfig } from '../config.js';
 import { getLlmProvider, type LlmMessage } from './llm.js';
 import { formatCitation, searchRag } from './rag.js';
 import { assessMessage, SAFETY_EMERGENCY_MESSAGE, type SafetyFinding } from './safety.js';
+import { buildUserContextBlock } from './user-context.js';
 
 export type ChatContext = 'general' | 'check-in' | 'conflict' | 'journal';
 
@@ -136,6 +137,7 @@ function buildSystemPrompt(
   allowedTopics: string[] | undefined,
   ragBlock: string,
   isFirstMessage: boolean,
+  userContextBlock: string,
 ): string {
   const topics = allowedTopics
     ? Object.entries(TOPICS_META)
@@ -149,6 +151,8 @@ function buildSystemPrompt(
     '',
     'Pilares que você pode abordar:',
     ...topics.map((t) => `- ${t}`),
+    '',
+    userContextBlock,
     '',
     ragBlock,
   ].join('\n');
@@ -198,7 +202,14 @@ export async function chatWithLove(input: ChatInput): Promise<ChatResult> {
   const history = priorMessages.reverse();
   const isFirstMessage = history.length === 0;
 
-  const system = buildSystemPrompt(input.context, input.allowedTopics, ragBlock, isFirstMessage);
+  const userContextBlock = await buildUserContextBlock(input.userId);
+  const system = buildSystemPrompt(
+    input.context,
+    input.allowedTopics,
+    ragBlock,
+    isFirstMessage,
+    userContextBlock,
+  );
   const messages: LlmMessage[] = [
     ...history.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
     { role: 'user', content: input.content },
