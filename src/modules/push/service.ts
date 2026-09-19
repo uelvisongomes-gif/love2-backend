@@ -52,6 +52,25 @@ export interface PushPayload {
   tag?: string;
 }
 
+export async function sendTestNotification(userId: string): Promise<{
+  configured: boolean;
+  subscriptions: number;
+  sent: number;
+}> {
+  ensureVapid();
+  const cfg = loadConfig();
+  const configured = !!cfg.VAPID_PUBLIC_KEY && !!cfg.VAPID_PRIVATE_KEY;
+  const subs = await prisma.pushSubscription.findMany({ where: { userId } });
+  if (!configured) return { configured, subscriptions: subs.length, sent: 0 };
+  const sent = await sendToUser(userId, {
+    title: 'love2 — teste',
+    body: 'Se você tá vendo essa mensagem, notificações funcionam!',
+    url: '/tarefas',
+    tag: 'test',
+  });
+  return { configured, subscriptions: subs.length, sent };
+}
+
 async function sendToUser(userId: string, payload: PushPayload): Promise<number> {
   ensureVapid();
   const cfg = loadConfig();

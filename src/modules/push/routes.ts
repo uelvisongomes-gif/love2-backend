@@ -3,7 +3,7 @@ import { ZodError } from 'zod';
 import { AppError } from '../../errors.js';
 import { loadConfig } from '../../config.js';
 import { subscribeInput, unsubscribeInput } from './schema.js';
-import { subscribe, unsubscribe } from './service.js';
+import { subscribe, unsubscribe, sendTestNotification, runReminderScheduler } from './service.js';
 
 function handle(err: unknown, reply: FastifyReply, log: FastifyBaseLogger) {
   if (err instanceof ZodError) {
@@ -39,6 +39,26 @@ export async function pushRoutes(app: FastifyInstance): Promise<void> {
       const input = unsubscribeInput.parse(req.body);
       await unsubscribe(input.endpoint);
       return reply.code(204).send();
+    } catch (err) {
+      return handle(err, reply, req.log);
+    }
+  });
+
+  // Envia uma notificação de teste AGORA pro user logado
+  app.post('/push/test', { preHandler: app.authenticate }, async (req, reply) => {
+    try {
+      const result = await sendTestNotification(req.userId!);
+      return reply.code(200).send(result);
+    } catch (err) {
+      return handle(err, reply, req.log);
+    }
+  });
+
+  // Força o scheduler a rodar agora (útil pra debug)
+  app.post('/push/run-scheduler', { preHandler: app.authenticate }, async (req, reply) => {
+    try {
+      const r = await runReminderScheduler();
+      return reply.code(200).send(r);
     } catch (err) {
       return handle(err, reply, req.log);
     }
