@@ -1,0 +1,1 @@
+ALTER TABLE "CoupleTask" ALTER COLUMN "coupleId" DROP NOT NULL;

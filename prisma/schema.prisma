@@ -161,7 +161,7 @@ model JournalEntry {
 
 model CoupleTask {
   id           String    @id @default(cuid())
-  coupleId     String
+  coupleId     String?   // null quando o usuário ainda não tem parceiro (tarefa solo)
   pillar       String
   title        String
   description  String?

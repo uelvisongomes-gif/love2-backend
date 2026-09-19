@@ -2,11 +2,17 @@ import { prisma } from '../../db/client.js';
 import { AppError } from '../../errors.js';
 import type { CreateTaskInput, ListTasksQuery } from './schema.js';
 
-async function coupleOf(userId: string): Promise<{ id: string; userAId: string; userBId: string }> {
-  const c = await prisma.couple.findFirst({
+async function coupleOfOptional(
+  userId: string,
+): Promise<{ id: string; userAId: string; userBId: string } | null> {
+  return prisma.couple.findFirst({
     where: { OR: [{ userAId: userId }, { userBId: userId }] },
     select: { id: true, userAId: true, userBId: true },
   });
+}
+
+async function coupleOf(userId: string): Promise<{ id: string; userAId: string; userBId: string }> {
+  const c = await coupleOfOptional(userId);
   if (!c) throw new AppError('NO_COUPLE', 'Você ainda não está vinculado a um casal', 403);
   return c;
 }
@@ -22,11 +28,11 @@ function resolveAssignedTo(
 }
 
 export async function createTask(userId: string, input: CreateTaskInput) {
-  const couple = await coupleOf(userId);
-  const assignedTo = resolveAssignedTo(input.assignTo, userId, couple);
+  const couple = await coupleOfOptional(userId);
+  const assignedTo = couple ? resolveAssignedTo(input.assignTo, userId, couple) : userId;
   return prisma.coupleTask.create({
     data: {
-      coupleId: couple.id,
+      coupleId: couple?.id ?? null,
       pillar: input.pillar,
       title: input.title,
       description: input.description,
@@ -50,15 +56,21 @@ function nextDueDate(base: Date | null, recurrence: string): Date {
 }
 
 export async function listTasks(userId: string, query: ListTasksQuery = { scope: 'all', status: 'open' }) {
-  const couple = await coupleOf(userId);
-  const partnerId = couple.userAId === userId ? couple.userBId : couple.userAId;
+  const couple = await coupleOfOptional(userId);
+  const partnerId = couple ? (couple.userAId === userId ? couple.userBId : couple.userAId) : null;
 
-  const where: Record<string, unknown> = { coupleId: couple.id };
+  // Solo: só as próprias (coupleId null + createdBy = user)
+  // Casal: todas do casal
+  const base: Record<string, unknown> = couple
+    ? { OR: [{ coupleId: couple.id }, { coupleId: null, createdBy: userId }] }
+    : { coupleId: null, createdBy: userId };
+
+  const where: Record<string, unknown> = { ...base };
   if (query.category) where.category = query.category;
   if (query.scope === 'mine') {
-    where.OR = [{ assignedTo: userId }, { assignedTo: null }];
-  } else if (query.scope === 'partner') {
-    where.OR = [{ assignedTo: partnerId }, { assignedTo: null }];
+    where.AND = [{ OR: [{ assignedTo: userId }, { assignedTo: null }] }];
+  } else if (query.scope === 'partner' && partnerId) {
+    where.AND = [{ OR: [{ assignedTo: partnerId }, { assignedTo: null }] }];
   }
   if (query.status === 'open') where.completedAt = null;
   else if (query.status === 'done') where.completedAt = { not: null };
@@ -92,9 +104,25 @@ async function applyCompletion(id: string, hasRecurrence: string | null, current
 }
 
 export async function completeTask(userId: string, id: string) {
-  const couple = await coupleOf(userId);
-  const task = await prisma.coupleTask.findFirst({ where: { id, coupleId: couple.id } });
+  const couple = await coupleOfOptional(userId);
+  const task = await prisma.coupleTask.findFirst({
+    where: {
+      id,
+      OR: couple
+        ? [{ coupleId: couple.id }, { coupleId: null, createdBy: userId }]
+        : [{ coupleId: null, createdBy: userId }],
+    },
+  });
   if (!task) throw new AppError('NOT_FOUND', 'Tarefa não encontrada', 404);
+
+  // Tarefa solo (sem casal): quem criou marca direto
+  if (!couple) {
+    return applyCompletion(id, task.recurrence ?? null, {
+      dueBy: task.dueBy,
+      completedByA: task.completedByA,
+      completedByB: task.completedByB,
+    });
+  }
 
   // Se assignedTo é definido (não null = both), quem foi atribuído marca como cumprido direto
   if (task.assignedTo && task.assignedTo === userId) {
@@ -132,8 +160,15 @@ export async function completeTask(userId: string, id: string) {
 }
 
 export async function reopenTask(userId: string, id: string) {
-  const couple = await coupleOf(userId);
-  const task = await prisma.coupleTask.findFirst({ where: { id, coupleId: couple.id } });
+  const couple = await coupleOfOptional(userId);
+  const task = await prisma.coupleTask.findFirst({
+    where: {
+      id,
+      OR: couple
+        ? [{ coupleId: couple.id }, { coupleId: null, createdBy: userId }]
+        : [{ coupleId: null, createdBy: userId }],
+    },
+  });
   if (!task) throw new AppError('NOT_FOUND', 'Tarefa não encontrada', 404);
   return prisma.coupleTask.update({
     where: { id },
@@ -142,7 +177,14 @@ export async function reopenTask(userId: string, id: string) {
 }
 
 export async function deleteTask(userId: string, id: string): Promise<void> {
-  const couple = await coupleOf(userId);
-  const res = await prisma.coupleTask.deleteMany({ where: { id, coupleId: couple.id } });
+  const couple = await coupleOfOptional(userId);
+  const res = await prisma.coupleTask.deleteMany({
+    where: {
+      id,
+      OR: couple
+        ? [{ coupleId: couple.id }, { coupleId: null, createdBy: userId }]
+        : [{ coupleId: null, createdBy: userId }],
+    },
+  });
   if (res.count === 0) throw new AppError('NOT_FOUND', 'Tarefa não encontrada', 404);
 }

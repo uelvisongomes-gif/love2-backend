@@ -114,12 +114,19 @@ export async function runReminderScheduler(): Promise<{ notified: number }> {
     let recipients: string[];
     if (task.assignedTo) {
       recipients = [task.assignedTo];
-    } else {
+    } else if (task.coupleId) {
       const couple = await prisma.couple.findUnique({
         where: { id: task.coupleId },
         select: { userAId: true, userBId: true },
       });
       recipients = couple ? [couple.userAId, couple.userBId] : [];
+    } else {
+      // Tarefa solo — pega quem criou
+      const t = await prisma.coupleTask.findUnique({
+        where: { id: task.id },
+        select: { createdBy: true },
+      });
+      recipients = t ? [t.createdBy] : [];
     }
     for (const uid of recipients) {
       const sent = await sendToUser(uid, {
