@@ -229,3 +229,23 @@ model PasswordResetCode {
 
   @@index([userId])
 }
+
+// Acordo entre parceiros gerado a partir do modo "Tem Conflito".
+// Salvo por quem criou; ambos do casal veem.
+// status: em_andamento | cumprido | precisa_revisar
+model Agreement {
+  id          String    @id @default(cuid())
+  coupleId    String?
+  createdBy   String
+  title       String
+  content     String
+  pillar      String?
+  status      String    @default("em_andamento")
+  conflictId  String?
+  resolvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([coupleId, createdAt])
+  @@index([createdBy, createdAt])
+}
