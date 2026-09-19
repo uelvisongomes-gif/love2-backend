@@ -162,17 +162,43 @@ export async function runReminderScheduler(): Promise<{ notified: number }> {
       recipients = t ? [t.createdBy] : [];
     }
     console.log(`[scheduler] processing task ${task.id} recipients=${JSON.stringify(recipients)}`);
+    // Manda push (se tiver subscription) E email (sempre)
     for (const uid of recipients) {
-      const subs = await prisma.pushSubscription.count({ where: { userId: uid } });
-      console.log(`[scheduler] user ${uid} has ${subs} subscriptions`);
+      const [subs, user] = await Promise.all([
+        prisma.pushSubscription.count({ where: { userId: uid } }),
+        prisma.user.findUnique({ where: { id: uid }, select: { email: true, name: true } }),
+      ]);
+      console.log(`[scheduler] user ${uid} has ${subs} push subscriptions`);
+      // Push (opcional)
       const sent = await sendToUser(uid, {
         title: 'love2 — lembrete',
         body: task.title,
         url: '/tarefas',
         tag: `task-${task.id}`,
       });
-      console.log(`[scheduler] sent=${sent} for user ${uid}`);
+      console.log(`[scheduler] push sent=${sent} for user ${uid}`);
       total += sent;
+      // Email (sempre)
+      if (user?.email) {
+        try {
+          const { getEmailSender } = await import('../auth/email.js');
+          const subject = `🔔 love2 — ${task.title}`;
+          const text = `Oi${user.name ? `, ${user.name}` : ''}!\n\nSó lembrando: ${task.title}\n\nAcessa em https://www.love2.com.br/tarefas\n\n— love2`;
+          const html = `<div style="font-family: system-ui, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
+            <h2 style="color: #c9694a; font-weight: 500;">🔔 Lembrete do love2</h2>
+            <p style="font-size: 16px; color: #333;">Oi${user.name ? `, ${user.name}` : ''}! Só passando pra lembrar:</p>
+            <div style="background: #faf7f2; border-left: 3px solid #c9694a; padding: 16px; border-radius: 4px; margin: 16px 0;">
+              <strong style="font-size: 18px; color: #222;">${task.title}</strong>
+            </div>
+            <a href="https://www.love2.com.br/tarefas" style="display: inline-block; background: #c9694a; color: white; padding: 12px 24px; border-radius: 999px; text-decoration: none; font-weight: 600; margin-top: 8px;">Ver na love2</a>
+            <p style="color: #999; font-size: 12px; margin-top: 32px;">Você tá recebendo esse email porque criou uma tarefa com hora de lembrete no love2.</p>
+          </div>`;
+          await getEmailSender().send(user.email, subject, text, html);
+          console.log(`[scheduler] email sent to ${user.email}`);
+        } catch (err) {
+          console.log(`[scheduler] email fail: ${(err as Error).message}`);
+        }
+      }
     }
     await prisma.taskReminderLog.create({
       data: { taskId: task.id, remindAt: task.remindAt },
