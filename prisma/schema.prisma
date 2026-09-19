@@ -234,6 +234,26 @@ model TwoFactorCode {
   @@index([userId])
 }
 
+// Item genérico do casal — domain: filhos | metas | tempo_casal
+model LifeItem {
+  id             String    @id @default(cuid())
+  coupleId       String?
+  createdBy      String
+  domain         String    // filhos | metas | tempo_casal
+  title          String
+  description    String?
+  scheduledAt    DateTime?
+  completedAt    DateTime?
+  responsibleId  String?
+  recurring      Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([coupleId, domain])
+  @@index([createdBy, domain])
+  @@index([scheduledAt])
+}
+
 // Item financeiro do casal — kind: conta_mensal | compra_grande | decisao
 model FinanceItem {
   id             String    @id @default(cuid())
