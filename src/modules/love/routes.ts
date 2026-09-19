@@ -15,6 +15,13 @@ const ttsInput = z
   })
   .strict();
 
+const historyQuery = z
+  .object({
+    context: z.enum(['general', 'check-in', 'conflict', 'journal']),
+    limit: z.coerce.number().int().positive().max(100).default(50),
+  })
+  .strict();
+
 async function assertLoveConsent(userId: string): Promise<void> {
   const required = CURRENT_CONSENT_VERSIONS.disclaimer_love_not_therapist;
   const hit = await prisma.consent.findFirst({
@@ -52,6 +59,38 @@ export async function loveRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(err.statusCode).send({ error: { code: err.code, message: err.message } });
       }
       req.log.error({ err }, 'love/chat failed');
+      return reply.code(500).send({ error: { code: 'INTERNAL_ERROR', message: 'Erro interno' } });
+    }
+  });
+
+  app.get('/love/history', { preHandler: app.authenticate }, async (req, reply) => {
+    try {
+      const q = historyQuery.parse(req.query);
+      const rows = await prisma.loveMessage.findMany({
+        where: {
+          userId: req.userId!,
+          context: q.context,
+          role: { in: ['user', 'assistant'] },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: q.limit,
+        select: { id: true, role: true, content: true, citations: true, createdAt: true },
+      });
+      const messages = rows.reverse().map((m) => ({
+        id: m.id,
+        role: m.role,
+        content: m.content,
+        citations: m.citations,
+        createdAt: m.createdAt,
+      }));
+      return reply.code(200).send({ messages });
+    } catch (err) {
+      if (err instanceof ZodError) {
+        return reply.code(400).send({
+          error: { code: 'VALIDATION_ERROR', message: err.issues.map((i) => i.message).join('; ') },
+        });
+      }
+      req.log.error({ err }, 'love/history failed');
       return reply.code(500).send({ error: { code: 'INTERNAL_ERROR', message: 'Erro interno' } });
     }
   });
