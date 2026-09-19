@@ -234,6 +234,50 @@ model TwoFactorCode {
   @@index([userId])
 }
 
+// Ciclo menstrual — configuração pessoal do usuário
+model CycleProfile {
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  averageCycleDays   Int       @default(28)
+  averagePeriodDays  Int       @default(5)
+  premenstrualDays   Int       @default(3)  // dias antes que a pessoa costuma sentir mudança
+  // Consentimento pra compartilhar
+  shareWithPartner   Boolean   @default(false)
+  sharePeriodStart   Boolean   @default(false)
+  sharePreMenstrual  Boolean   @default(false)
+  sharePreferences   Boolean   @default(false)
+  // Preferências pessoais (JSON: array de strings escolhidas)
+  carePreferences    Json?     // ex: ["mais_carinho", "mais_espaco", "paciencia"]
+  customNote         String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+// Períodos menstruais registrados
+model CyclePeriod {
+  id         String    @id @default(cuid())
+  userId     String
+  startDate  DateTime  @db.Date
+  endDate    DateTime? @db.Date
+  createdAt  DateTime  @default(now())
+
+  @@unique([userId, startDate])
+  @@index([userId])
+}
+
+// Registro diário opcional de sintomas
+model CycleDailyLog {
+  id        String    @id @default(cuid())
+  userId    String
+  date      DateTime  @db.Date
+  symptoms  Json      // { mood: string, cramp: bool, headache: bool, ... }
+  note      String?
+  createdAt DateTime  @default(now())
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
 // Item genérico do casal — domain: filhos | metas | tempo_casal
 model LifeItem {
   id             String    @id @default(cuid())
