@@ -8,7 +8,7 @@ const schema = z.object({
   DATABASE_URL: z.string().url(),
   DIRECT_URL: z.string().url(),
   JWT_SECRET: z.string().min(32),
-  ACCESS_TTL_MIN: z.coerce.number().int().positive().default(15),
+  ACCESS_TTL_MIN: z.coerce.number().int().positive().default(10080),
   REFRESH_TTL_DAYS: z.coerce.number().int().positive().default(7),
   SMS_DRIVER: z.enum(['twilio', 'memory']).default('memory'),
   TWILIO_ACCOUNT_SID: z.string().optional(),
