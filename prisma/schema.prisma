@@ -234,6 +234,28 @@ model TwoFactorCode {
   @@index([userId])
 }
 
+// Item financeiro do casal — kind: conta_mensal | compra_grande | decisao
+model FinanceItem {
+  id             String    @id @default(cuid())
+  coupleId       String?
+  createdBy      String
+  kind           String
+  title          String
+  amount         Decimal?  @db.Decimal(12, 2)
+  category       String?   // moradia | alimentacao | transporte | saude | lazer | educacao | outros
+  dueBy          DateTime?
+  paidAt         DateTime?
+  responsibleId  String?
+  recurring      Boolean   @default(false)
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([coupleId, kind])
+  @@index([createdBy, kind])
+  @@index([dueBy])
+}
+
 // Assinatura de push notification do navegador (Web Push API)
 model PushSubscription {
   id        String   @id @default(cuid())

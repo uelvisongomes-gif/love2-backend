@@ -15,6 +15,7 @@ import { healthIndexRoutes } from './modules/health-index/routes.js';
 import { conflictsRoutes } from './modules/conflicts/routes.js';
 import { agreementsRoutes } from './modules/agreements/routes.js';
 import { pushRoutes } from './modules/push/routes.js';
+import { financeRoutes } from './modules/finance/routes.js';
 
 export async function buildApp(config: AppConfig = loadConfig()): Promise<FastifyInstance> {
   const app = Fastify({
@@ -49,5 +50,6 @@ export async function buildApp(config: AppConfig = loadConfig()): Promise<Fastif
   await app.register(conflictsRoutes);
   await app.register(agreementsRoutes);
   await app.register(pushRoutes);
+  await app.register(financeRoutes);
   return app;
 }
