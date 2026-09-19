@@ -30,7 +30,10 @@ const schema = z.object({
   SMTP_PASS: z.string().optional(),
   EMAIL_FROM: z.string().optional(),
   BREVO_API_KEY: z.string().optional(),
-  APP_URL: z.string().url().default('https://love2-woad.vercel.app'),
+  APP_URL: z.string().url().default('https://www.love2.com.br'),
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_CONTACT_EMAIL: z.string().email().default('uelvisongomes@gmail.com'),
 });
 
 export type AppConfig = z.infer<typeof schema>;

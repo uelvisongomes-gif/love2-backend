@@ -175,6 +175,8 @@ model CoupleTask {
   // Novos campos v2
   category     String?   // casa | filhos | financas | tempo_casal | metas
   assignedTo   String?   // userId específico, ou null = ambos
+  recurrence   String?   // null (não repete) | daily | weekly | monthly
+  remindAt     DateTime? // horário exato do lembrete (browser notification)
 
   @@index([coupleId, createdAt])
   @@index([coupleId, category])
@@ -230,6 +232,30 @@ model TwoFactorCode {
   createdAt DateTime  @default(now())
 
   @@index([userId])
+}
+
+// Assinatura de push notification do navegador (Web Push API)
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// Log de notificações já enviadas pra não duplicar
+model TaskReminderLog {
+  id        String   @id @default(cuid())
+  taskId    String
+  remindAt  DateTime
+  sentAt    DateTime @default(now())
+
+  @@unique([taskId, remindAt])
+  @@index([taskId])
 }
 
 model PasswordResetCode {

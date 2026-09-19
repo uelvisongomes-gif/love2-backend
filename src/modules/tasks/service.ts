@@ -33,9 +33,20 @@ export async function createTask(userId: string, input: CreateTaskInput) {
       dueBy: input.dueBy ? new Date(input.dueBy) : null,
       category: input.category,
       assignedTo,
+      recurrence: input.recurrence,
+      remindAt: input.remindAt ? new Date(input.remindAt) : null,
       createdBy: userId,
     },
   });
+}
+
+function nextDueDate(base: Date | null, recurrence: string): Date {
+  const start = base ?? new Date();
+  const next = new Date(start);
+  if (recurrence === 'daily') next.setDate(next.getDate() + 1);
+  else if (recurrence === 'weekly') next.setDate(next.getDate() + 7);
+  else if (recurrence === 'monthly') next.setMonth(next.getMonth() + 1);
+  return next;
 }
 
 export async function listTasks(userId: string, query: ListTasksQuery = { scope: 'all', status: 'open' }) {
@@ -59,6 +70,27 @@ export async function listTasks(userId: string, query: ListTasksQuery = { scope:
   return { tasks };
 }
 
+async function applyCompletion(id: string, hasRecurrence: string | null, current: {
+  dueBy: Date | null;
+  completedByA: boolean;
+  completedByB: boolean;
+}) {
+  if (hasRecurrence) {
+    // Recorrente: rola a data pra próxima ocorrência e mantém aberta
+    const nextDue = nextDueDate(current.dueBy, hasRecurrence);
+    return prisma.coupleTask.update({
+      where: { id },
+      data: {
+        completedAt: null,
+        completedByA: false,
+        completedByB: false,
+        dueBy: nextDue,
+      },
+    });
+  }
+  return prisma.coupleTask.update({ where: { id }, data: { completedAt: new Date() } });
+}
+
 export async function completeTask(userId: string, id: string) {
   const couple = await coupleOf(userId);
   const task = await prisma.coupleTask.findFirst({ where: { id, coupleId: couple.id } });
@@ -66,6 +98,13 @@ export async function completeTask(userId: string, id: string) {
 
   // Se assignedTo é definido (não null = both), quem foi atribuído marca como cumprido direto
   if (task.assignedTo && task.assignedTo === userId) {
+    if (task.recurrence) {
+      return applyCompletion(id, task.recurrence, {
+        dueBy: task.dueBy,
+        completedByA: task.completedByA,
+        completedByB: task.completedByB,
+      });
+    }
     return prisma.coupleTask.update({
       where: { id },
       data: {
@@ -83,7 +122,11 @@ export async function completeTask(userId: string, id: string) {
   const patch = userId === couple.userAId ? { completedByA: true } : { completedByB: true };
   const updated = await prisma.coupleTask.update({ where: { id }, data: patch });
   if (updated.completedByA && updated.completedByB && !updated.completedAt) {
-    return prisma.coupleTask.update({ where: { id }, data: { completedAt: new Date() } });
+    return applyCompletion(id, task.recurrence ?? null, {
+      dueBy: updated.dueBy,
+      completedByA: updated.completedByA,
+      completedByB: updated.completedByB,
+    });
   }
   return updated;
 }
