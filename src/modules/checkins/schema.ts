@@ -17,3 +17,17 @@ export const checkinTodayInput = z
   })
   .strict();
 export type CheckinTodayInput = z.infer<typeof checkinTodayInput>;
+
+const score15 = z.number().int().min(1).max(5);
+
+export const checkinV2Input = z
+  .object({
+    connectionScore: score15,
+    communicationScore: score15,
+    affectionScore: score15,
+    partnershipScore: score15,
+    emotionalScore: score15,
+    openNote: z.string().max(2000).optional(),
+  })
+  .strict();
+export type CheckinV2Input = z.infer<typeof checkinV2Input>;

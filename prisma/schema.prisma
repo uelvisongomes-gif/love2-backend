@@ -113,15 +113,22 @@ model SafetyScreening {
 }
 
 model CheckIn {
-  id             String   @id @default(cuid())
-  userId         String
-  date           DateTime @db.Date
-  moodOverall    Int
-  intimacyToday  Boolean  @default(false)
-  dateNightToday Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  events         Event[]
+  id                  String   @id @default(cuid())
+  userId              String
+  date                DateTime @db.Date
+  moodOverall         Int
+  intimacyToday       Boolean  @default(false)
+  dateNightToday      Boolean  @default(false)
+  // Novos campos do check-in v2 (sliders 1-5)
+  connectionScore     Int?
+  communicationScore  Int?
+  affectionScore      Int?
+  partnershipScore    Int?
+  emotionalScore      Int?
+  openNote            String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  events              Event[]
 
   @@unique([userId, date])
   @@index([userId, date])

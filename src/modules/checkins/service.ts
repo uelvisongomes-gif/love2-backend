@@ -1,5 +1,5 @@
 import { prisma } from '../../db/client.js';
-import type { CheckinTodayInput } from './schema.js';
+import type { CheckinTodayInput, CheckinV2Input } from './schema.js';
 
 async function userTimezone(userId: string): Promise<string> {
   const p = await prisma.profile.findUnique({ where: { userId }, select: { timezone: true } });
@@ -39,6 +39,92 @@ export async function upsertTodayCheckin(userId: string, input: CheckinTodayInpu
       include: { events: true },
     });
   });
+}
+
+export async function upsertTodayCheckinV2(userId: string, input: CheckinV2Input) {
+  const tz = await userTimezone(userId);
+  const date = todayInTz(tz);
+  // moodOverall derivado da média dos 5 scores (1-5 → 1-10 aprox)
+  const scores = [
+    input.connectionScore,
+    input.communicationScore,
+    input.affectionScore,
+    input.partnershipScore,
+    input.emotionalScore,
+  ];
+  const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+  const moodOverall = Math.max(1, Math.min(10, Math.round(avg * 2)));
+
+  return prisma.checkIn.upsert({
+    where: { userId_date: { userId, date } },
+    create: {
+      userId,
+      date,
+      moodOverall,
+      connectionScore: input.connectionScore,
+      communicationScore: input.communicationScore,
+      affectionScore: input.affectionScore,
+      partnershipScore: input.partnershipScore,
+      emotionalScore: input.emotionalScore,
+      openNote: input.openNote ?? null,
+    },
+    update: {
+      moodOverall,
+      connectionScore: input.connectionScore,
+      communicationScore: input.communicationScore,
+      affectionScore: input.affectionScore,
+      partnershipScore: input.partnershipScore,
+      emotionalScore: input.emotionalScore,
+      openNote: input.openNote ?? null,
+    },
+  });
+}
+
+export interface CheckinHistoryRow {
+  date: string;
+  connectionScore: number | null;
+  communicationScore: number | null;
+  affectionScore: number | null;
+  partnershipScore: number | null;
+  emotionalScore: number | null;
+  openNote: string | null;
+  moodOverall: number | null;
+}
+
+export async function checkinHistory(
+  userId: string,
+  days: number,
+): Promise<{ checkins: CheckinHistoryRow[] }> {
+  const tz = await userTimezone(userId);
+  const today = todayInTz(tz);
+  const from = new Date(today);
+  from.setUTCDate(from.getUTCDate() - (days - 1));
+  const rows = await prisma.checkIn.findMany({
+    where: { userId, date: { gte: from, lte: today } },
+    orderBy: { date: 'asc' },
+    select: {
+      date: true,
+      connectionScore: true,
+      communicationScore: true,
+      affectionScore: true,
+      partnershipScore: true,
+      emotionalScore: true,
+      openNote: true,
+      moodOverall: true,
+    },
+  });
+  return {
+    checkins: rows.map((r) => ({
+      date: r.date.toISOString().slice(0, 10),
+      connectionScore: r.connectionScore,
+      communicationScore: r.communicationScore,
+      affectionScore: r.affectionScore,
+      partnershipScore: r.partnershipScore,
+      emotionalScore: r.emotionalScore,
+      openNote: r.openNote,
+      moodOverall: r.moodOverall,
+    })),
+  };
 }
 
 export async function last7Days(userId: string): Promise<{
