@@ -271,7 +271,7 @@ model CycleProfile {
   userId             String    @unique
   averageCycleDays   Int       @default(28)
   averagePeriodDays  Int       @default(5)
-  premenstrualDays   Int       @default(3)  // dias antes que a pessoa costuma sentir mudança
+  premenstrualDays   Int       @default(5)  // dias antes que a pessoa costuma sentir mudança (TPM: média 5-7)
   // Consentimento pra compartilhar
   shareWithPartner   Boolean   @default(false)
   sharePeriodStart   Boolean   @default(false)
@@ -282,6 +282,18 @@ model CycleProfile {
   customNote         String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
+}
+
+// Log de notificações enviadas pro parceiro — evita duplicar
+model CycleNotificationLog {
+  id        String   @id @default(cuid())
+  userId    String   // dona do ciclo
+  kind      String   // pre_menstrual | period_start
+  sentDate  DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  @@unique([userId, kind, sentDate])
+  @@index([userId])
 }
 
 // Períodos menstruais registrados

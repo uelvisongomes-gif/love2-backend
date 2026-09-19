@@ -1,6 +1,17 @@
 import { prisma } from '../../db/client.js';
 import { AppError } from '../../errors.js';
+import { getEmailSender } from '../auth/email.js';
 import type { DailyLogInput, LogPeriodInput, UpdateProfileInput } from './schema.js';
+
+const CARE_LABELS: Record<string, string> = {
+  mais_carinho: 'Prefere mais carinho',
+  mais_espaco: 'Prefere mais espaço',
+  paciencia_com_sensibilidade: 'Paciência com sensibilidade',
+  ajuda_nas_tarefas: 'Ajuda nas tarefas do dia',
+  evitar_conversas_dificeis: 'Adiar conversas difíceis',
+  perguntar_como_estou: 'Perguntar como está antes de presumir',
+  lembrar_de_comprar_o_que_preciso: 'Lembrar de comprar o que ela costuma precisar',
+};
 
 function parseDate(s: string): Date {
   const [y, m, d] = s.split('-').map(Number);
@@ -123,6 +134,85 @@ export async function predict(userId: string): Promise<CyclePrediction> {
     daysUntilPeriod: daysUntil,
     currentPhase: phase,
   };
+}
+
+/**
+ * Roda a cada hora. Pra cada mulher com sharePreMenstrual ativado,
+ * calcula quando começa a TPM. Se for AMANHÃ, manda email pro parceiro hoje.
+ */
+export async function runCycleNotifications(): Promise<{ sent: number }> {
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+
+  const profiles = await prisma.cycleProfile.findMany({
+    where: { shareWithPartner: true, sharePreMenstrual: true },
+  });
+
+  let sent = 0;
+  for (const p of profiles) {
+    try {
+      const pred = await predict(p.userId);
+      if (!pred.nextPreMenstrual) continue;
+      // Se a TPM prevista começa amanhã, hoje é o dia de avisar
+      if (pred.nextPreMenstrual !== tomorrowStr) continue;
+      // Já avisou hoje?
+      const today = new Date(todayStr);
+      const already = await prisma.cycleNotificationLog.findUnique({
+        where: {
+          userId_kind_sentDate: { userId: p.userId, kind: 'pre_menstrual', sentDate: today },
+        },
+      });
+      if (already) continue;
+      // Pega parceiro
+      const couple = await prisma.couple.findFirst({
+        where: { OR: [{ userAId: p.userId }, { userBId: p.userId }] },
+        select: { userAId: true, userBId: true },
+      });
+      if (!couple) continue;
+      const partnerId = couple.userAId === p.userId ? couple.userBId : couple.userAId;
+      const [partner, her] = await Promise.all([
+        prisma.user.findUnique({ where: { id: partnerId }, select: { email: true, name: true } }),
+        prisma.user.findUnique({ where: { id: p.userId }, select: { name: true } }),
+      ]);
+      if (!partner?.email) continue;
+      const prefs = (p.sharePreferences ? (p.carePreferences as string[] | null) : null) ?? [];
+      const prefsHtml = prefs.length > 0
+        ? `<p style="font-size:15px;color:#333;margin:16px 0 8px;"><strong>Como ela gosta de ser cuidada:</strong></p>
+           <ul style="font-size:15px;color:#333;line-height:1.6;margin:0;padding-left:20px;">
+             ${prefs.map((v) => `<li>${CARE_LABELS[v] ?? v}</li>`).join('')}
+           </ul>`
+        : '';
+      const noteHtml = p.sharePreferences && p.customNote
+        ? `<div style="background:#faf7f2;border-left:3px solid #e6604a;padding:12px 16px;border-radius:4px;margin:16px 0;font-size:14px;color:#333;">${p.customNote}</div>`
+        : '';
+      const subject = `❤️ Um lembrete de cuidado`;
+      const text = `Oi${partner.name ? `, ${partner.name}` : ''}!\n\nDe acordo com o ciclo que ${her?.name ?? 'sua parceira'} compartilha com você, os próximos dias podem ser um período em que ela costuma precisar de um pouco mais de atenção.\n\nQue tal perguntar como ela tá?\n\nVer mais em https://www.love2.com.br/ciclo-parceira\n\n— love2`;
+      const html = `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:24px;">
+        <h2 style="color:#e6604a;font-weight:500;">❤️ Um lembrete de cuidado</h2>
+        <p style="font-size:16px;color:#333;line-height:1.6;">
+          De acordo com o ciclo que <strong>${her?.name ?? 'sua parceira'}</strong> compartilha com você, os próximos dias podem ser um período em que ela costuma precisar de um pouco mais de atenção.
+        </p>
+        <p style="font-size:16px;color:#333;line-height:1.6;">
+          Cada pessoa vive esse período de um jeito diferente — <strong>não é sobre suposição, é sobre presença</strong>.
+        </p>
+        ${prefsHtml}
+        ${noteHtml}
+        <a href="https://www.love2.com.br/ciclo-parceira" style="display:inline-block;background:#e6604a;color:white;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:600;margin-top:16px;">Ver como ela gosta de ser cuidada</a>
+        <p style="color:#999;font-size:12px;margin-top:32px;">Você recebeu esse email porque ela autorizou compartilhar o ciclo com você. Ela pode desligar essa opção a qualquer momento.</p>
+      </div>`;
+      await getEmailSender().send(partner.email, subject, text, html);
+      await prisma.cycleNotificationLog.create({
+        data: { userId: p.userId, kind: 'pre_menstrual', sentDate: today },
+      });
+      sent++;
+    } catch (err) {
+      console.log('[cycle notify]', p.userId, (err as Error).message);
+    }
+  }
+  return { sent };
 }
 
 /**
