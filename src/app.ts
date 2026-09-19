@@ -18,6 +18,7 @@ import { pushRoutes } from './modules/push/routes.js';
 import { financeRoutes } from './modules/finance/routes.js';
 import { lifeRoutes } from './modules/life/routes.js';
 import { cycleRoutes } from './modules/cycle/routes.js';
+import { mediationRoutes } from './modules/mediation/routes.js';
 
 export async function buildApp(config: AppConfig = loadConfig()): Promise<FastifyInstance> {
   const app = Fastify({
@@ -55,5 +56,6 @@ export async function buildApp(config: AppConfig = loadConfig()): Promise<Fastif
   await app.register(financeRoutes);
   await app.register(lifeRoutes);
   await app.register(cycleRoutes);
+  await app.register(mediationRoutes);
   return app;
 }

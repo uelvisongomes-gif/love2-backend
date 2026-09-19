@@ -234,6 +234,37 @@ model TwoFactorCode {
   @@index([userId])
 }
 
+// Sessão de mediação conjunta — dois parceiros respondem etapas privadas + LOVE sintetiza
+model MediationSession {
+  id            String    @id @default(cuid())
+  coupleId      String
+  initiatorId   String
+  targetId      String
+  status        String    @default("in_progress")  // in_progress | ready_for_synthesis | agreed | canceled
+  topic         String?   // sobre o que é
+  synthesis     String?   // texto neutro gerado pela LOVE
+  proposedAgreement String?
+  agreementId   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([coupleId, createdAt])
+  @@index([initiatorId])
+  @@index([targetId])
+}
+
+model MediationStep {
+  id          String    @id @default(cuid())
+  sessionId   String
+  userId      String   // quem responde
+  step        String    // fatos | sentimento | necessidade | ponto_do_outro
+  answer      String
+  submittedAt DateTime  @default(now())
+
+  @@unique([sessionId, userId, step])
+  @@index([sessionId])
+}
+
 // Ciclo menstrual — configuração pessoal do usuário
 model CycleProfile {
   id                 String    @id @default(cuid())
