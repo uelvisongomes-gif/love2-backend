@@ -86,8 +86,9 @@ async function sendToUser(userId: string, payload: PushPayload): Promise<number>
         );
         sent++;
       } catch (err) {
-        const status = (err as { statusCode?: number }).statusCode;
-        if (status === 404 || status === 410) {
+        const e = err as { statusCode?: number; message?: string; body?: string };
+        console.log(`[push] send fail status=${e.statusCode} message=${e.message} body=${e.body}`);
+        if (e.statusCode === 404 || e.statusCode === 410) {
           // subscription morreu — remove
           await prisma.pushSubscription.deleteMany({ where: { endpoint: s.endpoint } });
         }
@@ -106,6 +107,9 @@ export async function runReminderScheduler(): Promise<{ notified: number }> {
   const now = new Date();
   const from = new Date(now.getTime() - 5 * 60 * 1000);
 
+  const cfg = loadConfig();
+  const configured = !!cfg.VAPID_PUBLIC_KEY && !!cfg.VAPID_PRIVATE_KEY;
+
   const due = await prisma.coupleTask.findMany({
     where: {
       remindAt: { gte: from, lte: now },
@@ -119,6 +123,13 @@ export async function runReminderScheduler(): Promise<{ notified: number }> {
       coupleId: true,
     },
   });
+  if (due.length > 0) {
+    console.log(`[scheduler] tick — vapid=${configured} due=${due.length}`, due.map((d) => ({
+      id: d.id,
+      title: d.title,
+      remindAt: d.remindAt?.toISOString(),
+    })));
+  }
 
   let total = 0;
   for (const task of due) {
@@ -128,7 +139,10 @@ export async function runReminderScheduler(): Promise<{ notified: number }> {
       where: { taskId: task.id, remindAt: task.remindAt },
       select: { id: true },
     });
-    if (already) continue;
+    if (already) {
+      console.log(`[scheduler] skip ${task.id} — já notificado`);
+      continue;
+    }
 
     let recipients: string[];
     if (task.assignedTo) {
@@ -147,13 +161,17 @@ export async function runReminderScheduler(): Promise<{ notified: number }> {
       });
       recipients = t ? [t.createdBy] : [];
     }
+    console.log(`[scheduler] processing task ${task.id} recipients=${JSON.stringify(recipients)}`);
     for (const uid of recipients) {
+      const subs = await prisma.pushSubscription.count({ where: { userId: uid } });
+      console.log(`[scheduler] user ${uid} has ${subs} subscriptions`);
       const sent = await sendToUser(uid, {
         title: 'love2 — lembrete',
         body: task.title,
         url: '/tarefas',
         tag: `task-${task.id}`,
       });
+      console.log(`[scheduler] sent=${sent} for user ${uid}`);
       total += sent;
     }
     await prisma.taskReminderLog.create({
