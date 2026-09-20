@@ -1,8 +1,15 @@
 import type { FastifyBaseLogger, FastifyInstance, FastifyReply } from 'fastify';
 import { ZodError } from 'zod';
 import { AppError } from '../../errors.js';
-import { upsertProfileInput } from './schema.js';
-import { getAllowedTopics, getProfile, upsertProfile } from './service.js';
+import { upsertProfileInput, uploadPhotoInput } from './schema.js';
+import {
+  getAllowedTopics,
+  getProfile,
+  upsertProfile,
+  updateUserPhoto,
+  removeUserPhoto,
+  getUserBasic,
+} from './service.js';
 import { getSafetyScreening, safetyScreeningInput, submitSafetyScreening } from './safety-screening.js';
 
 function handle(err: unknown, reply: FastifyReply, log: FastifyBaseLogger) {
@@ -57,6 +64,34 @@ export async function profileRoutes(app: FastifyInstance): Promise<void> {
   app.get('/profile/safety-screening', { preHandler: app.authenticate }, async (req, reply) => {
     try {
       return reply.code(200).send(await getSafetyScreening(req.userId!));
+    } catch (err) {
+      return handle(err, reply, req.log);
+    }
+  });
+
+  // Etapa 2 — foto do usuário e dados básicos
+  app.get('/me', { preHandler: app.authenticate }, async (req, reply) => {
+    try {
+      return reply.code(200).send(await getUserBasic(req.userId!));
+    } catch (err) {
+      return handle(err, reply, req.log);
+    }
+  });
+
+  app.put('/me/photo', { preHandler: app.authenticate }, async (req, reply) => {
+    try {
+      const { photoUrl } = uploadPhotoInput.parse(req.body);
+      await updateUserPhoto(req.userId!, photoUrl);
+      return reply.code(200).send({ ok: true });
+    } catch (err) {
+      return handle(err, reply, req.log);
+    }
+  });
+
+  app.delete('/me/photo', { preHandler: app.authenticate }, async (req, reply) => {
+    try {
+      await removeUserPhoto(req.userId!);
+      return reply.code(200).send({ ok: true });
     } catch (err) {
       return handle(err, reply, req.log);
     }

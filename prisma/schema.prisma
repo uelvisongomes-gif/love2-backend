@@ -14,6 +14,7 @@ model User {
   email        String   @unique
   phone        String   @unique
   passwordHash String
+  photoUrl     String?  @db.Text // data URL (base64) — cliente comprime pra ~15-30KB
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   coupleAsA    Couple?  @relation("CoupleUserA")
@@ -97,8 +98,39 @@ model Profile {
   hasChildren          Boolean?
   livingTogether       Boolean?
   timezone             String   @default("America/Sao_Paulo")
+  // Dados pessoais expandidos (Etapa 2)
+  birthDate            DateTime? @db.Date
+  gender               String?   // mulher | homem | naobinario | prefiro_nao_dizer
+  occupation           String?
+  location             String?   // cidade
+  healthNotes          String?   // texto livre — condições, remédios, alergias
+  // Relacionamento
+  civilStatus          String?   // namoro | noivado | casados | uniao_estavel
+  relationshipStart    DateTime? @db.Date
+  howMet               String?   // texto curto
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
+}
+
+// Filhos do casal — saúde e cuidados afetam o casal
+model Child {
+  id             String    @id @default(cuid())
+  coupleId       String?
+  createdBy      String
+  name           String
+  birthDate      DateTime? @db.Date
+  gender         String?   // menino | menina | outro
+  photoUrl       String?   @db.Text // base64 small
+  parentage      String?   // biologico_ambos | biologico_um | adotado | enteado
+  livesWith      String?   // conosco | pai | mae | alternado
+  schoolInfo     String?
+  healthNotes    String?   // condições, alergias, remédios
+  personality    String?   // texto livre
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([coupleId])
+  @@index([createdBy])
 }
 
 model SafetyScreening {

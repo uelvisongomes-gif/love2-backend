@@ -52,6 +52,26 @@ export const upsertProfileInput = z
     hasChildren: z.boolean().optional(),
     livingTogether: z.boolean().optional(),
     timezone: z.string().optional(),
+    // Etapa 2 — dados pessoais expandidos
+    birthDate: z.string().datetime().nullable().optional(),
+    gender: z.enum(['mulher', 'homem', 'naobinario', 'prefiro_nao_dizer']).nullable().optional(),
+    occupation: z.string().max(120).nullable().optional(),
+    location: z.string().max(120).nullable().optional(),
+    healthNotes: z.string().max(2000).nullable().optional(),
+    civilStatus: z.enum(['namoro', 'noivado', 'casados', 'uniao_estavel']).nullable().optional(),
+    relationshipStart: z.string().datetime().nullable().optional(),
+    howMet: z.string().max(500).nullable().optional(),
   })
   .strict();
 export type UpsertProfileInput = z.infer<typeof upsertProfileInput>;
+
+// Foto do usuário (data URL) — cliente comprime pra ~15-30KB
+export const uploadPhotoInput = z
+  .object({
+    photoUrl: z
+      .string()
+      .max(200_000) // ~150KB base64 hard cap
+      .regex(/^data:image\/(jpeg|png|webp);base64,/, 'formato inválido — use imagem'),
+  })
+  .strict();
+export type UploadPhotoInput = z.infer<typeof uploadPhotoInput>;
