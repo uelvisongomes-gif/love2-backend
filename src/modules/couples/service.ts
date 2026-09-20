@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { prisma } from '../../db/client.js';
 import { AppError } from '../../errors.js';
 import type { AcceptInput, InviteInput } from './schema.js';
+import { sendWhatsApp } from '../wame/service.js';
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -43,7 +44,10 @@ export async function createInvite(
   return { inviteId: invite.id, code: invite.code };
 }
 
-export async function acceptInvite(userId: string, input: AcceptInput): Promise<{ coupleId: string }> {
+export async function acceptInvite(
+  userId: string,
+  input: AcceptInput,
+): Promise<{ coupleId: string; myName: string; partnerName: string }> {
   const invite = await prisma.coupleInvite.findUnique({ where: { code: input.code } });
   if (!invite || invite.acceptedAt || invite.expiresAt < new Date()) {
     throw new AppError('INVITE_NOT_FOUND', 'Convite não encontrado ou expirado', 404);
@@ -59,6 +63,10 @@ export async function acceptInvite(userId: string, input: AcceptInput): Promise<
   await ensureNoCouple(userId);
   await ensureNoCouple(invite.inviterId);
 
+  const inviter = await prisma.user.findUnique({ where: { id: invite.inviterId } });
+  const myName = user.name;
+  const partnerName = inviter?.name ?? 'seu parceiro(a)';
+
   const couple = await prisma.$transaction(async (tx) => {
     const c = await tx.couple.create({
       data: { userAId: invite.inviterId, userBId: userId },
@@ -67,7 +75,36 @@ export async function acceptInvite(userId: string, input: AcceptInput): Promise<
     await tx.coupleInvite.update({ where: { id: invite.id }, data: { acceptedAt: new Date() } });
     return c;
   });
-  return { coupleId: couple.id };
+
+  // Fire-and-forget: notifica ambos pelo WhatsApp se tiverem vínculo
+  void notifyCoupleLinked(invite.inviterId, userId, partnerName, myName);
+
+  return { coupleId: couple.id, myName, partnerName };
+}
+
+async function notifyCoupleLinked(
+  inviterUserId: string,
+  accepterUserId: string,
+  inviterName: string,
+  accepterName: string,
+): Promise<void> {
+  try {
+    const [inviterLink, accepterLink] = await Promise.all([
+      prisma.userPhoneLink.findUnique({ where: { userId: inviterUserId } }),
+      prisma.userPhoneLink.findUnique({ where: { userId: accepterUserId } }),
+    ]);
+
+    if (inviterLink) {
+      const msg = `🎉 ${accepterName} aceitou seu convite! Vocês agora estão vinculados como casal no LOVE2. A partir de agora eu cuido de vocês juntos.`;
+      await sendWhatsApp(inviterLink.phoneE164, msg);
+    }
+    if (accepterLink) {
+      const msg = `🎉 Prontinho! Você e ${inviterName} agora estão vinculados como casal no LOVE2. Vou cuidar de vocês juntos daqui pra frente.`;
+      await sendWhatsApp(accepterLink.phoneE164, msg);
+    }
+  } catch (err) {
+    console.error('[couples] notifyCoupleLinked failed', err);
+  }
 }
 
 export async function getMyCouple(
