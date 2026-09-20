@@ -20,8 +20,27 @@ function avg(nums: (number | null)[]): number | null {
   return Math.round((clean.reduce((a, b) => a + b, 0) / clean.length) * 10) / 10;
 }
 
+function partnerPronoun(gender: string | null): {
+  ele_ela: string;
+  dele_dela: string;
+  o_a: string;
+  parceiro_parceira: string;
+} {
+  if (gender === 'homem') {
+    return { ele_ela: 'ele', dele_dela: 'dele', o_a: 'o', parceiro_parceira: 'parceiro' };
+  }
+  if (gender === 'mulher') {
+    return { ele_ela: 'ela', dele_dela: 'dela', o_a: 'a', parceiro_parceira: 'parceira' };
+  }
+  return { ele_ela: 'ele/ela', dele_dela: 'dele/dela', o_a: 'o/a', parceiro_parceira: 'parceiro(a)' };
+}
+
 export async function buildUserContextBlock(userId: string): Promise<string> {
-  const [profile, checkins, agreements, couple] = await Promise.all([
+  const [user, profile, checkins, agreements, couple] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    }),
     prisma.profile.findUnique({
       where: { userId },
       select: {
@@ -30,6 +49,7 @@ export async function buildUserContextBlock(userId: string): Promise<string> {
         livingTogether: true,
         loveLanguagesRanking: true,
         pillarScores: true,
+        gender: true,
       },
     }),
     // Últimos 14 dias — média por dimensão
@@ -63,11 +83,40 @@ export async function buildUserContextBlock(userId: string): Promise<string> {
     }),
     prisma.couple.findFirst({
       where: { OR: [{ userAId: userId }, { userBId: userId }] },
-      select: { id: true },
+      select: { id: true, userAId: true, userBId: true },
     }),
   ]);
 
+  // Se em casal, pega dados básicos do parceiro pra saber gênero + nome
+  let partnerInfo: { name: string; gender: string | null } | null = null;
+  if (couple) {
+    const partnerId = couple.userAId === userId ? couple.userBId : couple.userAId;
+    const [partnerUser, partnerProfile] = await Promise.all([
+      prisma.user.findUnique({ where: { id: partnerId }, select: { name: true } }),
+      prisma.profile.findUnique({ where: { userId: partnerId }, select: { gender: true } }),
+    ]);
+    if (partnerUser) {
+      partnerInfo = { name: partnerUser.name, gender: partnerProfile?.gender ?? null };
+    }
+  }
+
   const lines: string[] = ['CONTEXTO DO USUÁRIO (pra você referenciar quando relevante — sem citar como se fosse ficha):'];
+
+  if (user?.name) lines.push(`- Nome do usuário: ${user.name}.`);
+  if (profile?.gender) {
+    lines.push(`- Gênero do usuário: ${profile.gender === 'homem' ? 'homem' : profile.gender === 'mulher' ? 'mulher' : profile.gender}.`);
+  }
+
+  if (partnerInfo) {
+    lines.push(`- Nome do(a) parceiro(a): ${partnerInfo.name}.`);
+    if (partnerInfo.gender) {
+      const p = partnerPronoun(partnerInfo.gender);
+      lines.push(`- Gênero do(a) parceiro(a): ${partnerInfo.gender === 'homem' ? 'homem' : partnerInfo.gender === 'mulher' ? 'mulher' : partnerInfo.gender}.`);
+      lines.push(`- PRONOMES CERTOS ao falar do parceiro: use "${p.ele_ela}", "${p.dele_dela}", "${p.parceiro_parceira}" — NUNCA inverta.`);
+    } else {
+      lines.push('- ATENÇÃO: gênero do parceiro não informado. Use linguagem neutra ("seu parceiro", "essa pessoa") até saber.');
+    }
+  }
 
   if (profile) {
     if (profile.relationshipYears != null) {
