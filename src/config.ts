@@ -34,6 +34,13 @@ const schema = z.object({
   VAPID_PUBLIC_KEY: z.string().optional(),
   VAPID_PRIVATE_KEY: z.string().optional(),
   VAPID_CONTACT_EMAIL: z.string().email().default('uelvisongomes@gmail.com'),
+  // WhatsApp via WAME (Meta Business Partner)
+  WAME_ENABLED: z.coerce.boolean().default(false),
+  WAME_SERVER: z.string().url().default('https://us.api-wa.me'),
+  WAME_API_KEY: z.string().optional(),
+  WAME_INSTANCE_ID: z.string().optional(),
+  WAME_WEBHOOK_SECRET: z.string().optional(), // secret compartilhado no header pra proteger o webhook
+  WAME_LOVE_NUMBER: z.string().optional(), // número que aparece pro usuário salvar (ex: +55 11 91234-5678)
 });
 
 export type AppConfig = z.infer<typeof schema>;

@@ -500,6 +500,48 @@ model HistoryPinAttempt {
   @@index([userId, createdAt])
 }
 
+// Vinculação de número WhatsApp ↔ conta LOVE
+model UserPhoneLink {
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  phoneE164  String    @unique // ex: 5511999998888
+  linkedAt   DateTime  @default(now())
+  lastSeenAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phoneE164])
+}
+
+// Código de 6 dígitos gerado pelo app pra vincular telefone
+model PhoneLinkCode {
+  id        String    @id @default(cuid())
+  userId    String
+  code      String    @unique // 6 dígitos
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, expiresAt])
+}
+
+// Mensagens do WhatsApp — log unificado (recebidas e enviadas)
+model WhatsAppMessage {
+  id        String   @id @default(cuid())
+  userId    String?  // null se ainda não vinculado
+  phoneE164 String
+  direction String   // in | out
+  provider  String   @default("wame")
+  wamId     String?  @unique // id da mensagem no WhatsApp (idempotência)
+  kind      String   // text | audio | image | other
+  content   String?  @db.Text // texto (ou transcrição do áudio)
+  mediaUrl  String?
+  raw       Json?    // payload cru, pra debug
+  createdAt DateTime @default(now())
+
+  @@index([phoneE164, createdAt])
+  @@index([userId, createdAt])
+}
+
 // Acordo entre parceiros gerado a partir do modo "Tem Conflito".
 // Salvo por quem criou; ambos do casal veem.
 // status: em_andamento | cumprido | precisa_revisar

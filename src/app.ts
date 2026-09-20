@@ -24,6 +24,7 @@ import { homeRoutes } from './modules/home/routes.js';
 import { evolutionRoutes } from './modules/evolution/routes.js';
 import { nosRoutes } from './modules/nos/routes.js';
 import { historyRoutes } from './modules/history/routes.js';
+import { wameRoutes } from './modules/wame/routes.js';
 
 export async function buildApp(config: AppConfig = loadConfig()): Promise<FastifyInstance> {
   const app = Fastify({
@@ -67,5 +68,6 @@ export async function buildApp(config: AppConfig = loadConfig()): Promise<Fastif
   await app.register(evolutionRoutes);
   await app.register(nosRoutes);
   await app.register(historyRoutes);
+  await app.register(wameRoutes);
   return app;
 }
