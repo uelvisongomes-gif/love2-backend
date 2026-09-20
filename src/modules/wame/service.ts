@@ -1,8 +1,6 @@
 import { prisma } from '../../db/client.js';
 import { loadConfig } from '../../config.js';
-import { getWame } from './client.js';
 import { chatWithLove } from '../../ai/orchestrator.js';
-import { TypeMessage } from '@raphaelvserafim/client-api-whatsapp';
 
 /**
  * Normaliza um número pra E.164 sem "+". Ex: "+55 (11) 99999-8888" → "5511999998888".
@@ -84,18 +82,25 @@ async function consumeLinkCode(code: string, phoneE164: string): Promise<string 
  * Envia texto pelo WA. Fire-and-forget do lado do backend — logs em caso de falha.
  */
 export async function sendWhatsApp(phoneE164: string, text: string): Promise<void> {
-  const wame = getWame();
-  if (!wame) {
-    console.warn('[wame] getWame() null — mensagem não enviada:', { phoneE164, text: text.slice(0, 60) });
+  const cfg = loadConfig();
+  if (!cfg.WAME_ENABLED || !cfg.WAME_API_KEY) {
+    console.warn('[wame] WAME não configurado — mensagem não enviada', { phoneE164 });
     return;
   }
   try {
     console.log('[wame] sending message', { to: phoneE164, textPreview: text.slice(0, 60) });
-    const result = await wame.message.send({
-      type: TypeMessage.TEXT,
-      body: { to: phoneE164, text },
+    const url = `${cfg.WAME_SERVER}/${cfg.WAME_API_KEY}/message/text`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: phoneE164, text }),
     });
-    console.log('[wame] send result', { status: (result as { status?: number }).status });
+    const responseText = await res.text();
+    console.log('[wame] send result', { status: res.status, body: responseText.slice(0, 300) });
+    if (!res.ok) {
+      console.error('[wame] send failed with status', res.status, responseText);
+      return;
+    }
     await prisma.whatsAppMessage.create({
       data: {
         phoneE164,
