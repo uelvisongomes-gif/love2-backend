@@ -45,6 +45,70 @@ function buildDates(from: Date, to: Date): Date[] {
   return arr;
 }
 
+// Categorização simples por keyword matching (regex tolerante)
+const FRICTION_CATEGORIES: { key: string; label: string; patterns: RegExp[] }[] = [
+  {
+    key: 'financeiro',
+    label: 'Dinheiro',
+    patterns: [/dinheir/i, /financ/i, /conta[s]?\b/i, /gast/i, /divid/i, /cart[aã]o/i, /salar/i, /economi/i],
+  },
+  {
+    key: 'filhos',
+    label: 'Filhos',
+    patterns: [/filho/i, /crian[çc]a/i, /escola/i, /educa[çc][aã]o/i, /beb[eê]/i, /adolescent/i],
+  },
+  {
+    key: 'intimidade',
+    label: 'Intimidade / sexo',
+    patterns: [/sexo/i, /intim/i, /desejo/i, /cari?nho/i, /toque/i, /cama\b/i],
+  },
+  {
+    key: 'divisao_tarefas',
+    label: 'Divisão de tarefas',
+    patterns: [/tarefa/i, /limpe/i, /fazer\s+(a\s+)?comida/i, /louça/i, /roupa/i, /faxina/i, /casa\b/i, /organiz/i],
+  },
+  {
+    key: 'familia_extendida',
+    label: 'Família / sogros',
+    patterns: [/sogr[oa]/i, /minha m[ãa]e/i, /meu pai/i, /cunhad/i, /fam[ií]lia dele/i, /fam[ií]lia dela/i],
+  },
+  {
+    key: 'trabalho',
+    label: 'Trabalho / rotina',
+    patterns: [/trabalho/i, /emprego/i, /chefe/i, /reuni[aã]o/i, /viag(em|ens)/i, /hor[aá]rio/i],
+  },
+  {
+    key: 'ciume',
+    label: 'Ciúmes / redes sociais',
+    patterns: [/ciume|ci[uú]me/i, /mensagem/i, /whatsapp/i, /instagram/i, /rede social/i],
+  },
+  {
+    key: 'comunicacao',
+    label: 'Comunicação',
+    patterns: [/n[aã]o\s+conversa/i, /n[aã]o\s+escuta/i, /mal\s+entendido/i, /entendeu\s+errado/i, /grito|grita/i],
+  },
+  {
+    key: 'tempo_casal',
+    label: 'Tempo do casal',
+    patterns: [/celular/i, /tempo\s+juntos/i, /namoro/i, /sair juntos/i, /encontro/i, /ausente/i, /distante/i],
+  },
+  {
+    key: 'religiao_valores',
+    label: 'Valores / religião',
+    patterns: [/religi[aã]o/i, /igreja/i, /culto/i, /f[eé]\b/i, /valor(es)?\b/i],
+  },
+];
+
+function categorizeFriction(note: string | null | undefined): string | null {
+  if (!note || !note.trim()) return null;
+  for (const cat of FRICTION_CATEGORIES) {
+    for (const pat of cat.patterns) {
+      if (pat.test(note)) return cat.label;
+    }
+  }
+  return 'Outros';
+}
+
 export async function getEvolution(
   userId: string,
   days: number,
@@ -66,6 +130,7 @@ export async function getEvolution(
     positiveMemories: number;
     exerciseDays: number;
     avgSleep: number | null;
+    topFrictionReasons: { label: string; count: number }[];
   };
 }> {
   const tz = await userTimezone(userId);
@@ -90,6 +155,7 @@ export async function getEvolution(
         sleepHours: true,
         exercisedToday: true,
         frictionToday: true,
+        frictionNote: true,
         intimacyToday: true,
         positiveMemory: true,
       },
@@ -167,6 +233,19 @@ export async function getEvolution(
     return Math.round((filtered.reduce((a, b) => a + b, 0) / filtered.length) * 10) / 10;
   }
 
+  // Contagem de motivos de atrito por categoria
+  const frictionCounts = new Map<string, number>();
+  for (const r of mineRaw) {
+    if (!r.frictionToday) continue;
+    const cat = categorizeFriction(r.frictionNote);
+    if (!cat) continue;
+    frictionCounts.set(cat, (frictionCounts.get(cat) ?? 0) + 1);
+  }
+  const topFrictionReasons = Array.from(frictionCounts.entries())
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
+
   const summary = {
     checkinDaysMe: mineRaw.length,
     checkinDaysPartner: partnerRaw.length,
@@ -177,6 +256,7 @@ export async function getEvolution(
     positiveMemories: mineRaw.filter((r) => r.positiveMemory).length,
     exerciseDays: mineRaw.filter((r) => r.exercisedToday).length,
     avgSleep: avg(mineRaw.map((r) => r.sleepHours)),
+    topFrictionReasons,
   };
 
   return {
