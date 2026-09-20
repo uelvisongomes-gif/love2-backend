@@ -294,14 +294,16 @@ export async function handleIncoming(input: Incoming): Promise<void> {
   // Dispara "digitando..." pra dar feedback visual enquanto o LLM roda
   void sendTyping(phoneE164);
   try {
+    console.log('[wame] calling chatWithLove', { userId: link.userId, text: text.slice(0, 50) });
     const result = await chatWithLove({
       userId: link.userId,
       content: text,
       context: 'general',
     });
+    console.log('[wame] chatWithLove returned', { replyPreview: result.reply.slice(0, 60) });
     await sendWhatsApp(phoneE164, result.reply);
   } catch (err) {
-    console.error('[wame] chatWithLove failed', err);
+    console.error('[wame] chatWithLove failed', err instanceof Error ? err.message : err, err instanceof Error ? err.stack : '');
     await sendWhatsApp(
       phoneE164,
       'Deu um probleminha aqui do meu lado. Tenta de novo em um minutinho?',
