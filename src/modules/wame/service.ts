@@ -81,6 +81,25 @@ async function consumeLinkCode(code: string, phoneE164: string): Promise<string 
 /**
  * Envia texto pelo WA. Fire-and-forget do lado do backend — logs em caso de falha.
  */
+/**
+ * Envia indicador "digitando..." pro contato. Fire-and-forget.
+ */
+export async function sendTyping(phoneE164: string): Promise<void> {
+  const cfg = loadConfig();
+  if (!cfg.WAME_ENABLED || !cfg.WAME_API_KEY) return;
+  try {
+    const server = cfg.WAME_SERVER.trim().replace(/\/$/, '');
+    const key = cfg.WAME_API_KEY.trim();
+    await fetch(`${server}/${key}/message/presence`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: phoneE164, status: 'composing' }),
+    });
+  } catch {
+    /* fire-and-forget */
+  }
+}
+
 export async function sendWhatsApp(phoneE164: string, text: string): Promise<void> {
   const cfg = loadConfig();
   if (!cfg.WAME_ENABLED || !cfg.WAME_API_KEY) {
@@ -272,6 +291,8 @@ export async function handleIncoming(input: Incoming): Promise<void> {
   }
 
   // Vinculado — passa pra LOVE
+  // Dispara "digitando..." pra dar feedback visual enquanto o LLM roda
+  void sendTyping(phoneE164);
   try {
     const result = await chatWithLove({
       userId: link.userId,
