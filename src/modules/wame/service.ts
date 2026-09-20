@@ -89,7 +89,10 @@ export async function sendWhatsApp(phoneE164: string, text: string): Promise<voi
   }
   try {
     console.log('[wame] sending message', { to: phoneE164, textPreview: text.slice(0, 60) });
-    const url = `${cfg.WAME_SERVER}/${cfg.WAME_API_KEY}/message/text`;
+    const server = cfg.WAME_SERVER.trim().replace(/\/$/, '');
+    const key = (cfg.WAME_API_KEY ?? '').trim();
+    const url = `${server}/${key}/message/text`;
+    console.log('[wame] send URL', { url, serverLen: server.length, keyLen: key.length });
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
