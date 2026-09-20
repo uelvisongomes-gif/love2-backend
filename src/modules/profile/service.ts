@@ -39,13 +39,22 @@ export async function getUserBasic(userId: string): Promise<{
   email: string;
   phone: string;
   photoUrl: string | null;
+  gender: string | null;
+  hasCouple: boolean;
 }> {
-  const u = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, name: true, email: true, phone: true, photoUrl: true },
-  });
+  const [u, profile, couple] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, email: true, phone: true, photoUrl: true },
+    }),
+    prisma.profile.findUnique({ where: { userId }, select: { gender: true } }),
+    prisma.couple.findFirst({
+      where: { OR: [{ userAId: userId }, { userBId: userId }] },
+      select: { id: true },
+    }),
+  ]);
   if (!u) throw new AppError('USER_NOT_FOUND', 'Usuário não encontrado', 404);
-  return u;
+  return { ...u, gender: profile?.gender ?? null, hasCouple: Boolean(couple) };
 }
 
 export async function getProfile(userId: string) {

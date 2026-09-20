@@ -224,9 +224,13 @@ export async function partnerView(viewerId: string): Promise<{
   partnerName?: string;
   prediction?: {
     nextPeriodStart?: string;
+    nextPeriodEnd?: string;
     nextPreMenstrual?: string;
     daysUntilPeriod?: number;
     currentPhase?: string;
+    averagePeriodDays?: number;
+    averageCycleDays?: number;
+    premenstrualDays?: number;
   };
   preferences?: string[];
   customNote?: string | null;
@@ -251,9 +255,13 @@ export async function partnerView(viewerId: string): Promise<{
     partnerName?: string;
     prediction: {
       nextPeriodStart?: string;
+      nextPeriodEnd?: string;
       nextPreMenstrual?: string;
       daysUntilPeriod?: number;
       currentPhase?: string;
+      averagePeriodDays?: number;
+      averageCycleDays?: number;
+      premenstrualDays?: number;
     };
     preferences?: string[];
     customNote?: string | null;
@@ -261,12 +269,21 @@ export async function partnerView(viewerId: string): Promise<{
     hasPartner: true,
     hasAccess: true,
     partnerName: partnerUser?.name ?? undefined,
-    prediction: {},
+    prediction: {
+      averagePeriodDays: profile.averagePeriodDays,
+      averageCycleDays: profile.averageCycleDays,
+      premenstrualDays: profile.premenstrualDays,
+    },
   };
   if (profile.sharePeriodStart && pred.nextPeriodStart) {
     result.prediction.nextPeriodStart = pred.nextPeriodStart;
     result.prediction.daysUntilPeriod = pred.daysUntilPeriod ?? undefined;
     result.prediction.currentPhase = pred.currentPhase ?? undefined;
+    // Calcula quando a próxima menstruação vai terminar
+    const startDate = new Date(pred.nextPeriodStart);
+    const endDate = new Date(startDate);
+    endDate.setUTCDate(endDate.getUTCDate() + profile.averagePeriodDays - 1);
+    result.prediction.nextPeriodEnd = endDate.toISOString().slice(0, 10);
   }
   if (profile.sharePreMenstrual && pred.nextPreMenstrual) {
     result.prediction.nextPreMenstrual = pred.nextPreMenstrual;
