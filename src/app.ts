@@ -20,6 +20,7 @@ import { lifeRoutes } from './modules/life/routes.js';
 import { cycleRoutes } from './modules/cycle/routes.js';
 import { mediationRoutes } from './modules/mediation/routes.js';
 import { childrenRoutes } from './modules/children/routes.js';
+import { homeRoutes } from './modules/home/routes.js';
 
 export async function buildApp(config: AppConfig = loadConfig()): Promise<FastifyInstance> {
   const app = Fastify({
@@ -59,5 +60,6 @@ export async function buildApp(config: AppConfig = loadConfig()): Promise<Fastif
   await app.register(cycleRoutes);
   await app.register(mediationRoutes);
   await app.register(childrenRoutes);
+  await app.register(homeRoutes);
   return app;
 }
