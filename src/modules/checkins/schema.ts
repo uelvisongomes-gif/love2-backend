@@ -29,6 +29,13 @@ export const checkinV2Input = z
     emotionalScore: score15,
     openNote: z.string().max(2000).optional(),
     sharedWithPartner: z.boolean().default(false),
+    // Etapa 3 — sinais do dia (todos opcionais)
+    sleepHours: z.number().min(0).max(24).nullable().optional(),
+    exercisedToday: z.boolean().optional(),
+    frictionToday: z.boolean().optional(),
+    frictionNote: z.string().max(1000).nullable().optional(),
+    positiveMemory: z.string().max(1000).nullable().optional(),
+    intimacyToday: z.boolean().optional(),
   })
   .strict();
 export type CheckinV2Input = z.infer<typeof checkinV2Input>;

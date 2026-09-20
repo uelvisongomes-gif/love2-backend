@@ -159,6 +159,12 @@ model CheckIn {
   emotionalScore      Int?
   openNote            String?
   sharedWithPartner   Boolean  @default(false)
+  // Etapa 3 — sinais do dia
+  sleepHours          Float?   // horas de sono na noite anterior
+  exercisedToday      Boolean  @default(false)
+  frictionToday       Boolean  @default(false) // atrito, briga
+  frictionNote        String?
+  positiveMemory      String?  // uma coisa boa que aconteceu hoje
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   events              Event[]

@@ -55,6 +55,15 @@ export async function upsertTodayCheckinV2(userId: string, input: CheckinV2Input
   const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
   const moodOverall = Math.max(1, Math.min(10, Math.round(avg * 2)));
 
+  const extra = {
+    sleepHours: input.sleepHours ?? null,
+    exercisedToday: input.exercisedToday ?? false,
+    frictionToday: input.frictionToday ?? false,
+    frictionNote: input.frictionNote ?? null,
+    positiveMemory: input.positiveMemory ?? null,
+    intimacyToday: input.intimacyToday ?? false,
+  };
+
   return prisma.checkIn.upsert({
     where: { userId_date: { userId, date } },
     create: {
@@ -68,6 +77,7 @@ export async function upsertTodayCheckinV2(userId: string, input: CheckinV2Input
       emotionalScore: input.emotionalScore,
       openNote: input.openNote ?? null,
       sharedWithPartner: input.sharedWithPartner,
+      ...extra,
     },
     update: {
       moodOverall,
@@ -78,6 +88,7 @@ export async function upsertTodayCheckinV2(userId: string, input: CheckinV2Input
       emotionalScore: input.emotionalScore,
       openNote: input.openNote ?? null,
       sharedWithPartner: input.sharedWithPartner,
+      ...extra,
     },
   });
 }
