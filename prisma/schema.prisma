@@ -9,16 +9,17 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  phone        String   @unique
-  passwordHash String
-  photoUrl     String?  @db.Text // data URL (base64) — cliente comprime pra ~15-30KB
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  coupleAsA    Couple?  @relation("CoupleUserA")
-  coupleAsB    Couple?  @relation("CoupleUserB")
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  phone          String   @unique
+  passwordHash   String
+  photoUrl       String?  @db.Text
+  historyPinHash String?  // argon2 hash do PIN pessoal p/ Minha História
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  coupleAsA      Couple?  @relation("CoupleUserA")
+  coupleAsB      Couple?  @relation("CoupleUserB")
 }
 
 model Couple {
@@ -434,6 +435,69 @@ model PasswordResetCode {
   createdAt DateTime  @default(now())
 
   @@index([userId])
+}
+
+// Narrativa do casal — visão, história, valores, rituais (compartilhado)
+model CoupleNarrative {
+  id                String   @id @default(cuid())
+  coupleId          String   @unique
+  ourVision         String?  // o que queremos ser juntos
+  ourHistory        String?  // como se conheceram, marcos
+  ourValues         String?
+  connectionRituals String?  // rituais que nos aproximam
+  updatedById       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// Como vejo meu parceiro — cada um escreve o seu (privado por padrão)
+model PartnerPerception {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  admiration        String?  // o que admiro nele/nela
+  gratitude         String?  // pelo que sou grato(a)
+  worries           String?  // o que me preocupa
+  hopes             String?  // o que espero
+  visibleToPartner  Boolean  @default(false)
+  updatedAt         DateTime @updatedAt
+  createdAt         DateTime @default(now())
+}
+
+// Desafios pessoais que cada um enxerga — privado por padrão
+model PersonalChallenge {
+  id                String   @id @default(cuid())
+  userId            String
+  title             String
+  description       String?
+  visibleToPartner  Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId, createdAt])
+}
+
+// Minha História — registros pessoais protegidos por PIN (só o dono lê)
+model HistoryEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  content   String   @db.Text
+  category  String?  // ex-relacionamentos | familia | trabalho | outro
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+}
+
+// Log de tentativas de PIN — brute force
+model HistoryPinAttempt {
+  id        String   @id @default(cuid())
+  userId    String
+  success   Boolean
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 // Acordo entre parceiros gerado a partir do modo "Tem Conflito".
