@@ -90,10 +90,12 @@ export async function sendWhatsApp(phoneE164: string, text: string): Promise<voi
     return;
   }
   try {
-    await wame.message.send({
+    console.log('[wame] sending message', { to: phoneE164, textPreview: text.slice(0, 60) });
+    const result = await wame.message.send({
       type: TypeMessage.TEXT,
       body: { to: phoneE164, text },
     });
+    console.log('[wame] send result', { status: (result as { status?: number }).status });
     await prisma.whatsAppMessage.create({
       data: {
         phoneE164,
@@ -103,6 +105,7 @@ export async function sendWhatsApp(phoneE164: string, text: string): Promise<voi
         content: text,
       },
     });
+    console.log('[wame] send success — saved to DB');
   } catch (err) {
     console.error('[wame] send failed', err);
   }
@@ -179,12 +182,19 @@ const HELP_LINKED_GREETING = [
  * Processa uma mensagem que chegou. Já retorna null se for duplicada (idempotência).
  */
 export async function handleIncoming(input: Incoming): Promise<void> {
+  console.log('[wame] handleIncoming start', { from: input.from, wamId: input.wamId });
   const phoneE164 = normalizePhone(input.from);
-  if (!phoneE164) return;
+  if (!phoneE164) {
+    console.warn('[wame] normalizePhone returned null', { from: input.from });
+    return;
+  }
 
   // Idempotência via wamId
   const already = await prisma.whatsAppMessage.findUnique({ where: { wamId: input.wamId } });
-  if (already) return;
+  if (already) {
+    console.log('[wame] duplicate wamId — skipping', { wamId: input.wamId });
+    return;
+  }
 
   // Extrai texto
   let text: string | null = null;
@@ -218,7 +228,12 @@ export async function handleIncoming(input: Incoming): Promise<void> {
       where: { userId: link.userId },
       data: { lastSeenAt: new Date() },
     });
+    console.log('[wame] link found', { userId: link.userId, phoneE164 });
+  } else {
+    console.log('[wame] no link for phone', { phoneE164 });
   }
+
+  console.log('[wame] extracted text', { text: text?.slice(0, 60), kind });
 
   // Sem texto (áudio que não transcreveu ou vazio)
   if (!text || text.length === 0) {
@@ -234,13 +249,16 @@ export async function handleIncoming(input: Incoming): Promise<void> {
   // Não vinculado — tenta código
   if (!link) {
     const codeMatch = text.match(/\b(\d{6})\b/);
+    console.log('[wame] not linked — codeMatch', { codeMatch: codeMatch?.[1] ?? null });
     if (codeMatch) {
       const consumedUserId = await consumeLinkCode(codeMatch[1]!, phoneE164);
+      console.log('[wame] consumeLinkCode result', { consumedUserId });
       if (consumedUserId) {
         await sendWhatsApp(phoneE164, HELP_LINKED_GREETING);
         return;
       }
     }
+    console.log('[wame] sending HELP_UNLINKED', { phoneE164 });
     await sendWhatsApp(phoneE164, HELP_UNLINKED);
     return;
   }

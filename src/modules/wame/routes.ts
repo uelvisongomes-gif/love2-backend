@@ -37,17 +37,39 @@ export async function wameRoutes(app: FastifyInstance): Promise<void> {
     reply.code(200).send({ ok: true });
 
     try {
+      req.log.info({ bodyKeys: Object.keys(req.body ?? {}) }, '[wame] webhook received');
       const events = parseWebhook(req.body);
+      req.log.info({ eventsCount: events.length, eventsSummary: events.map((e) => ({ field: (e as { field?: string }).field, type: (e as { type?: string }).type })) }, '[wame] events parsed');
+
+      if (events.length === 0) {
+        req.log.warn({ rawBody: req.body }, '[wame] parseWebhook returned 0 events — payload shape unexpected');
+      }
+
       for (const ev of events) {
-        if (ev.field !== 'messages') continue;
-        if (ev.type === 'status') continue; // delivery/read receipts
-        // Narrowing: WebhookMessageEvent tem fromMe e chatType; UnknownEvent não
-        if (!('type' in ev)) continue;
-        const msg = ev as typeof ev & { fromMe?: boolean; chatType?: string };
-        if (msg.fromMe) continue;
-        if (msg.chatType === 'group') continue;
+        if (ev.field !== 'messages') {
+          req.log.info({ field: ev.field }, '[wame] skipping non-messages event');
+          continue;
+        }
+        if (ev.type === 'status') {
+          req.log.info('[wame] skipping status event');
+          continue;
+        }
+        if (!('type' in ev)) {
+          req.log.info({ ev }, '[wame] skipping unknown event');
+          continue;
+        }
+        const msg = ev as typeof ev & { fromMe?: boolean; chatType?: string; from?: string };
+        if (msg.fromMe) {
+          req.log.info('[wame] skipping fromMe (echo)');
+          continue;
+        }
+        if (msg.chatType === 'group') {
+          req.log.info('[wame] skipping group message');
+          continue;
+        }
 
         if (ev.type === 'text') {
+          req.log.info({ from: ev.from, textPreview: ev.text.body.slice(0, 40) }, '[wame] processing text');
           await handleIncoming({
             wamId: ev.messageId,
             from: ev.from,
@@ -60,14 +82,16 @@ export async function wameRoutes(app: FastifyInstance): Promise<void> {
             req.log.warn({ ev }, '[wame] audio sem id');
             continue;
           }
+          req.log.info({ from: ev.from, audioId }, '[wame] processing audio');
           await handleIncoming({
             wamId: ev.messageId,
             from: ev.from,
             audioId,
             raw: ev,
           });
+        } else {
+          req.log.info({ type: ev.type }, '[wame] tipo não suportado');
         }
-        // outros tipos (image, video, etc): por enquanto responde "só texto e áudio"
       }
     } catch (err) {
       req.log.error({ err }, '[wame] webhook processing failed');
