@@ -500,6 +500,31 @@ model HistoryPinAttempt {
   @@index([userId, createdAt])
 }
 
+// Sala de mediação a 3 em tempo real — LOVE + 2 usuários no chat web
+model LiveMediation {
+  id           String    @id @default(cuid())
+  coupleId     String
+  initiatorId  String
+  status       String    @default("waiting_partner") // waiting_partner | active | ended | canceled
+  topic        String?
+  agreementId  String?
+  endedAt      DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([coupleId, createdAt])
+}
+
+model LiveMediationMessage {
+  id        String   @id @default(cuid())
+  sessionId String
+  senderId  String?  // null = LOVE
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([sessionId, createdAt])
+}
+
 // Vinculação de número WhatsApp ↔ conta LOVE
 model UserPhoneLink {
   id         String    @id @default(cuid())
