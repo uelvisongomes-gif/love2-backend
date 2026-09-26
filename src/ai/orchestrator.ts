@@ -25,6 +25,7 @@ export interface ChatResult {
   citations: ChatCitation[];
   messageId: string;
   proposedAgreement?: string;
+  callPartner?: CallPartnerRequest;
 }
 
 /** Extract the text inside <acordo>...</acordo> if present, and strip the tag from the visible reply. */
@@ -34,6 +35,39 @@ function extractAgreement(text: string): { visible: string; agreement: string | 
   const agreement = match[1]?.trim() ?? null;
   const visible = text.replace(/<acordo>[\s\S]*?<\/acordo>/gi, '').trim();
   return { visible, agreement: agreement && agreement.length > 0 ? agreement : null };
+}
+
+export interface CallPartnerRequest {
+  topicos: string[];
+  mensagemParaParceiro: string;
+}
+
+/**
+ * Extract <chamar_parceiro>JSON</chamar_parceiro> tag if present and strip from visible.
+ * JSON schema: { "topicos": string[], "mensagem_para_parceiro": string }
+ */
+function extractCallPartner(text: string): {
+  visible: string;
+  callPartner: CallPartnerRequest | null;
+} {
+  const match = text.match(/<chamar_parceiro>([\s\S]*?)<\/chamar_parceiro>/i);
+  if (!match) return { visible: text, callPartner: null };
+  const raw = match[1]?.trim() ?? '';
+  const visible = text.replace(/<chamar_parceiro>[\s\S]*?<\/chamar_parceiro>/gi, '').trim();
+  try {
+    const parsed = JSON.parse(raw) as { topicos?: unknown; mensagem_para_parceiro?: unknown };
+    const topicos = Array.isArray(parsed.topicos)
+      ? parsed.topicos.filter((t): t is string => typeof t === 'string' && t.length > 0)
+      : [];
+    const mensagemParaParceiro =
+      typeof parsed.mensagem_para_parceiro === 'string' ? parsed.mensagem_para_parceiro : '';
+    if (topicos.length === 0 || !mensagemParaParceiro) {
+      return { visible, callPartner: null };
+    }
+    return { visible, callPartner: { topicos, mensagemParaParceiro } };
+  } catch {
+    return { visible, callPartner: null };
+  }
 }
 
 const STYLE_RULES = [
@@ -55,6 +89,23 @@ const CONTEXT_INSTRUCTIONS: Record<ChatContext, string> = {
     '- Conversa antes de resolver. Se não entendeu, faça UMA pergunta pra entender melhor.',
     '- Ajude a pessoa a enxergar o próprio ponto de vista E o do parceiro. Não tome partido.',
     '- Só ofereça sugestão prática quando a pessoa já explorou o que está sentindo, ou pedir explicitamente.',
+    '',
+    'FLUXO DE ACIONAR PARCEIRO (MUITO IMPORTANTE):',
+    'Quando (a) o problema envolve o parceiro, (b) a pessoa já falou pelo menos 2-3 mensagens sobre isso, (c) o casal está vinculado (veja no CONTEXTO), você DEVE ser proativa:',
+    '1) Faça um diagnóstico curto do que ouviu (1-2 frases).',
+    '2) Pergunte: "Quer que eu chame [nome do parceiro] pra gente conversar juntos sobre isso?" — se não souber o nome, fala "seu parceiro/sua parceira".',
+    '3) Se ele/ela disser SIM, você lista em tópicos numerados o que ouviu — MÁXIMO 5 tópicos, cada um em UMA frase curta. Exemplo:',
+    '   "Antes de chamar, vou listar o que eu ouvi. Você me diz se posso mandar tudo ou quer tirar algum:',
+    '    1. [tópico 1]',
+    '    2. [tópico 2]',
+    '    3. [tópico 3]"',
+    '4) Espere a pessoa confirmar (ex: "pode tudo", "tira o 2", etc). Se ela pedir pra tirar, você repete a lista revisada e pergunta se agora tá ok.',
+    '5) SÓ QUANDO ela confirmar que a lista tá ok, você emite a tag ESPECIAL no final da resposta (não em resposta anterior):',
+    '   <chamar_parceiro>{"topicos": ["tópico 1 revisado", "tópico 2", "..."], "mensagem_para_parceiro": "Oi [nome do parceiro]! Sou a LOVE. [nome do usuário] tá conversando comigo sobre alguns pontos importantes e queria chamar você pra gente resolver juntos. Ele/ela compartilhou:\\n\\n1. ...\\n2. ...\\n3. ...\\n\\nVocê topa a gente conversar sobre isso agora? Responde \'sim topo\' pra começarmos, ou \'agora não\' se prefere depois."}</chamar_parceiro>',
+    '   A parte visível da resposta antes da tag: uma frase curta tipo "Já mandei pro/pra [nome]. Assim que responder eu volto pra você."',
+    '   IMPORTANTE: o JSON dentro da tag DEVE ser válido — use aspas duplas, escape \\n corretamente. NUNCA use crases nem markdown dentro do JSON.',
+    '',
+    'REGRA CRÍTICA da tag <chamar_parceiro>: só emita ela DEPOIS que a pessoa explicitamente confirmou a lista de tópicos. Nunca no primeiro turno. Nunca sem confirmação.',
   ].join('\n'),
 
   conflict: [
@@ -228,7 +279,8 @@ export async function chatWithLove(input: ChatInput): Promise<ChatResult> {
     url: h.source.url,
   }));
 
-  const { visible, agreement } = extractAgreement(llmResult.text);
+  const { visible: afterAgreement, agreement } = extractAgreement(llmResult.text);
+  const { visible, callPartner } = extractCallPartner(afterAgreement);
 
   const asst = await prisma.loveMessage.create({
     data: {
@@ -246,6 +298,7 @@ export async function chatWithLove(input: ChatInput): Promise<ChatResult> {
     safety,
     citations,
     messageId: asst.id,
+    ...(callPartner && { callPartner }),
     ...(agreement ? { proposedAgreement: agreement } : {}),
   };
 }

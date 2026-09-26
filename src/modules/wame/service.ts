@@ -300,13 +300,58 @@ export async function handleIncoming(input: Incoming): Promise<void> {
       content: text,
       context: 'general',
     });
-    console.log('[wame] chatWithLove returned', { replyPreview: result.reply.slice(0, 60) });
+    console.log('[wame] chatWithLove returned', {
+      replyPreview: result.reply.slice(0, 60),
+      hasCallPartner: Boolean(result.callPartner),
+    });
     await sendWhatsApp(phoneE164, result.reply);
+
+    // Se LOVE decidiu acionar o parceiro, dispara mensagem pro WhatsApp dele
+    if (result.callPartner) {
+      void triggerCallPartner(link.userId, result.callPartner);
+    }
   } catch (err) {
-    console.error('[wame] chatWithLove failed', err instanceof Error ? err.message : err, err instanceof Error ? err.stack : '');
+    console.error(
+      '[wame] chatWithLove failed',
+      err instanceof Error ? err.message : err,
+      err instanceof Error ? err.stack : '',
+    );
     await sendWhatsApp(
       phoneE164,
       'Deu um probleminha aqui do meu lado. Tenta de novo em um minutinho?',
     );
+  }
+}
+
+/**
+ * Aciona o parceiro: encontra o UserPhoneLink dele e manda a mensagem construída pela LOVE.
+ * Fire-and-forget.
+ */
+async function triggerCallPartner(
+  userId: string,
+  request: { topicos: string[]; mensagemParaParceiro: string },
+): Promise<void> {
+  try {
+    const couple = await prisma.couple.findFirst({
+      where: { OR: [{ userAId: userId }, { userBId: userId }] },
+      select: { userAId: true, userBId: true },
+    });
+    if (!couple) {
+      console.warn('[wame] triggerCallPartner: user sem casal vinculado', { userId });
+      return;
+    }
+    const partnerId = couple.userAId === userId ? couple.userBId : couple.userAId;
+    const partnerLink = await prisma.userPhoneLink.findUnique({ where: { userId: partnerId } });
+    if (!partnerLink) {
+      console.warn('[wame] triggerCallPartner: parceiro sem WhatsApp vinculado', { partnerId });
+      return;
+    }
+    console.log('[wame] triggerCallPartner: enviando pro parceiro', {
+      partnerPhone: partnerLink.phoneE164,
+      topicos: request.topicos.length,
+    });
+    await sendWhatsApp(partnerLink.phoneE164, request.mensagemParaParceiro);
+  } catch (err) {
+    console.error('[wame] triggerCallPartner failed', err);
   }
 }
